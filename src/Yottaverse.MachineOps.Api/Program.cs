@@ -13,6 +13,27 @@ using Yottaverse.MachineOps.Infrastructure.Controller;
 using Yottaverse.MachineOps.Infrastructure.Database;
 using Yottaverse.MachineOps.Infrastructure.Diagnostics;
 
+if (args is ["--health-check"])
+{
+    try
+    {
+        using HttpClient healthClient = new() { Timeout = TimeSpan.FromSeconds(3) };
+        using HttpResponseMessage response =
+            await healthClient.GetAsync("http://127.0.0.1:8080/health/ready");
+        Environment.ExitCode = response.IsSuccessStatusCode ? 0 : 1;
+    }
+    catch (HttpRequestException)
+    {
+        Environment.ExitCode = 1;
+    }
+    catch (TaskCanceledException)
+    {
+        Environment.ExitCode = 1;
+    }
+
+    return;
+}
+
 WebApplicationBuilder builder = WebApplication.CreateBuilder(
     new WebApplicationOptions
     {
@@ -28,6 +49,10 @@ builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
 builder.Services.AddSignalR();
 builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton(
+    new ControllerConnectionDefaults(
+        builder.Configuration["Simulator:Host"] ?? "127.0.0.1",
+        TimeSpan.FromSeconds(5)));
 builder.Services.AddSingleton<GCodeParser>();
 
 bool useVolatileStorage = builder.Environment.IsEnvironment("Testing");
@@ -95,7 +120,7 @@ app.MapOpenApi();
 app.MapGet(
         "/health",
         (TimeProvider timeProvider) => TypedResults.Ok(
-            new ApiStatusDto("MachineOps API", "0.6.0", timeProvider.GetUtcNow())))
+            new ApiStatusDto("MachineOps API", "0.7.0", timeProvider.GetUtcNow())))
     .WithName("GetApiStatus")
     .WithTags("Operations");
 if (!useVolatileStorage)

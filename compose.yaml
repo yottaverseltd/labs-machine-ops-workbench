@@ -1,6 +1,36 @@
 name: machineops
 
 services:
+  api:
+    build:
+      context: .
+      dockerfile: deploy/docker/Api.Dockerfile
+    environment:
+      Urls: http://+:8080
+      ConnectionStrings__MachineOps: Host=postgres;Port=5432;Database=machineops;Username=machineops;Password=machineops
+      Simulator__Host: simulator
+    ports:
+      - "5080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      simulator:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "dotnet", "Yottaverse.MachineOps.Api.dll", "--health-check"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  simulator:
+    build:
+      context: .
+      dockerfile: deploy/docker/Simulator.Dockerfile
+    expose:
+      - "5099"
+    restart: unless-stopped
+
   postgres:
     image: postgres:18.4-alpine3.24
     environment:

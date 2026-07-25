@@ -6,10 +6,14 @@ namespace Yottaverse.MachineOps.Application.Machines;
 public sealed class ConnectSimulatorHandler
 {
     private readonly IControllerSession controllerSession;
+    private readonly ControllerConnectionDefaults connectionDefaults;
 
-    public ConnectSimulatorHandler(IControllerSession controllerSession)
+    public ConnectSimulatorHandler(
+        IControllerSession controllerSession,
+        ControllerConnectionDefaults connectionDefaults)
     {
         this.controllerSession = controllerSession;
+        this.connectionDefaults = connectionDefaults;
     }
 
     public Task<MachineSnapshot> HandleAsync(
@@ -24,9 +28,9 @@ public sealed class ConnectSimulatorHandler
         return controllerSession.ConnectAsync(
             new ControllerConnectionOptions(
                 MachineIdentifiers.LocalSimulator,
-                "127.0.0.1",
+                connectionDefaults.Host,
                 port,
-                TimeSpan.FromSeconds(5)),
+                connectionDefaults.Timeout),
             cancellationToken);
     }
 }

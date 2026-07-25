@@ -1,0 +1,10 @@
+Package: machineops-workbench
+Version: @VERSION@
+Section: devel
+Priority: optional
+Architecture: amd64
+Maintainer: Yottaverse <contact@qaisershah.co.uk>
+Depends: libx11-6, libice6, libsm6, libfontconfig1
+Description: Desktop workbench for the MachineOps controller simulator
+ MachineOps Workbench imports, validates, previews, and executes G-code
+ against the supported deterministic simulator.

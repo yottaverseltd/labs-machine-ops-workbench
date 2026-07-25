@@ -1,3 +1,4 @@
+using System.Net;
 using Yottaverse.MachineOps.Application.Abstractions;
 using Yottaverse.MachineOps.Core.Machines;
 using Yottaverse.MachineOps.Infrastructure.Controller;
@@ -120,7 +121,7 @@ public sealed class TcpControllerSessionTests
 
     private static async Task<SimulatorServer> StartServerAsync(SimulatorScenario scenario)
     {
-        SimulatorServer server = new(new SimulatorOptions(0, scenario));
+        SimulatorServer server = new(new SimulatorOptions(0, scenario, IPAddress.Loopback));
         await server.StartAsync();
         return server;
     }

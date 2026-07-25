@@ -11,7 +11,7 @@ Console.CancelKeyPress += (_, eventArgs) =>
 await using SimulatorServer server = new(options);
 await server.StartAsync(shutdown.Token);
 Console.WriteLine(
-    $"MachineOps simulator listening on 127.0.0.1:{server.BoundPort} with scenario '{options.Scenario}'.");
+    $"MachineOps simulator listening on {options.ListenAddress}:{server.BoundPort} with scenario '{options.Scenario}'.");
 Console.WriteLine("Press Ctrl+C to stop.");
 
 try

@@ -1,3 +1,5 @@
+using System.Net;
+
 namespace Yottaverse.MachineOps.Simulator;
 
 public enum SimulatorScenario
@@ -15,12 +17,14 @@ public enum SimulatorScenario
 
 public sealed record SimulatorOptions(
     int Port,
-    SimulatorScenario Scenario)
+    SimulatorScenario Scenario,
+    IPAddress ListenAddress)
 {
     public static SimulatorOptions Parse(IReadOnlyList<string> args)
     {
         int port = 5099;
         SimulatorScenario scenario = SimulatorScenario.Normal;
+        IPAddress listenAddress = IPAddress.Loopback;
         for (int index = 0; index < args.Count; index++)
         {
             switch (args[index])
@@ -31,6 +35,14 @@ public sealed record SimulatorOptions(
                         throw new ArgumentException("Simulator port must be between 0 and 65535.");
                     }
 
+                    break;
+                case "--listen" when index + 1 < args.Count:
+                    if (!IPAddress.TryParse(args[++index], out IPAddress? parsedAddress))
+                    {
+                        throw new ArgumentException($"Invalid listen address '{args[index]}'.");
+                    }
+
+                    listenAddress = parsedAddress;
                     break;
                 case "--scenario" when index + 1 < args.Count:
                     if (!Enum.TryParse(args[++index], ignoreCase: true, out scenario))
@@ -44,6 +56,6 @@ public sealed record SimulatorOptions(
             }
         }
 
-        return new SimulatorOptions(port, scenario);
+        return new SimulatorOptions(port, scenario, listenAddress);
     }
 }

@@ -29,7 +29,7 @@ public sealed class SimulatorServer : IAsyncDisposable
             throw new InvalidOperationException("The simulator is already running.");
         }
 
-        listener = new TcpListener(IPAddress.Loopback, options.Port);
+        listener = new TcpListener(options.ListenAddress, options.Port);
         listener.Start();
         BoundPort = ((IPEndPoint)listener.LocalEndpoint).Port;
         CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(

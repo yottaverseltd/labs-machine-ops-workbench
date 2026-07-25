@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=MachineOps Workbench
+Comment=Run and diagnose jobs against the MachineOps simulator
+Exec=machineops-workbench
+Terminal=false
+Categories=Development;Engineering;

@@ -8,6 +8,10 @@ public sealed record ControllerConnectionOptions(
     int Port,
     TimeSpan Timeout);
 
+public sealed record ControllerConnectionDefaults(
+    string Host,
+    TimeSpan Timeout);
+
 public enum ControllerOperation
 {
     Start,

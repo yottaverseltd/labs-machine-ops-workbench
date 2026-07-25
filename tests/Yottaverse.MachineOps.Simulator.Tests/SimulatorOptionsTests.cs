@@ -1,3 +1,4 @@
+using System.Net;
 using Yottaverse.MachineOps.Simulator;
 
 namespace Yottaverse.MachineOps.Simulator.Tests;
@@ -11,6 +12,7 @@ public sealed class SimulatorOptionsTests
 
         Assert.Equal(5099, options.Port);
         Assert.Equal(SimulatorScenario.Normal, options.Scenario);
+        Assert.Equal(IPAddress.Loopback, options.ListenAddress);
     }
 
     [Fact]

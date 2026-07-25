@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet restore Yottaverse.MachineOps.slnx
+      - run: dotnet format Yottaverse.MachineOps.slnx --verify-no-changes --no-restore
+      - run: dotnet build Yottaverse.MachineOps.slnx --configuration Release --no-restore
+      - name: Unit and architecture tests
+        shell: pwsh
+        run: |
+          dotnet test tests/Yottaverse.MachineOps.Core.Tests --configuration Release --no-build --collect:"XPlat Code Coverage"
+          dotnet test tests/Yottaverse.MachineOps.Application.Tests --configuration Release --no-build --collect:"XPlat Code Coverage"
+          dotnet test tests/Yottaverse.MachineOps.Architecture.Tests --configuration Release --no-build
+          dotnet test tests/Yottaverse.MachineOps.Simulator.Tests --configuration Release --no-build --collect:"XPlat Code Coverage"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-${{ matrix.os }}
+          path: '**/TestResults/**/coverage.cobertura.xml'
+
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet restore Yottaverse.MachineOps.slnx
+      - run: dotnet test tests/Yottaverse.MachineOps.Api.IntegrationTests --configuration Release
+      - run: dotnet test tests/Yottaverse.MachineOps.Infrastructure.IntegrationTests --configuration Release
+      - name: Compose smoke test
+        shell: bash
+        run: |
+          docker compose up -d --build --wait
+          curl --fail --retry 12 --retry-delay 2 http://localhost:5080/health/ready
+          docker compose down -v

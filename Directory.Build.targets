@@ -1,0 +1,8 @@
+<Project>
+  <Target Name="ReportMachineOpsBuild"
+          BeforeTargets="BeforeBuild"
+          Condition="'$(CI)' == 'true'">
+    <Message Importance="High"
+             Text="Building $(MSBuildProjectName) for $(TargetFramework) with deterministic CI settings." />
+  </Target>
+</Project>
