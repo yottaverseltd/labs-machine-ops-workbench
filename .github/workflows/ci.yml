@@ -15,8 +15,8 @@ jobs:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
       - run: dotnet restore Yottaverse.MachineOps.slnx
@@ -31,7 +31,7 @@ jobs:
           dotnet test tests/Yottaverse.MachineOps.Api.IntegrationTests --configuration Release --no-build --filter "HealthAndOpenApiDocumentsAreAvailable"
           dotnet test tests/Yottaverse.MachineOps.Architecture.Tests --configuration Release --no-build
           dotnet test tests/Yottaverse.MachineOps.Simulator.Tests --configuration Release --no-build --collect:"XPlat Code Coverage"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: coverage-${{ matrix.os }}
@@ -40,8 +40,8 @@ jobs:
   integration:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
       - run: dotnet restore Yottaverse.MachineOps.slnx
@@ -72,7 +72,7 @@ jobs:
           if ($lineCoverage -lt 50) {
             throw "Combined line coverage is below the 50% release floor."
           }
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: combined-coverage
@@ -87,7 +87,7 @@ jobs:
   container-scan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build API image
         run: docker build --file deploy/docker/Api.Dockerfile --tag machineops-api:ci .
       - uses: aquasecurity/trivy-action@v0.36.0
