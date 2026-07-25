@@ -1,0 +1,37 @@
+name: Feature proposal
+description: Suggest a focused improvement to the simulator-only workbench
+title: "[Feature] "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Explain the problem first. A proposed implementation is useful, but it
+        should not hide the user or operator need.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What is difficult or impossible today?
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: What should a user be able to do?
+    validations:
+      required: true
+  - type: textarea
+    id: boundaries
+    attributes:
+      label: Boundaries and tradeoffs
+      description: Note affected layers, compatibility concerns, or alternatives.
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope check
+      options:
+        - label: This proposal keeps v1 controller support simulator-only.
+          required: true

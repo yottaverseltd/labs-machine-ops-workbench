@@ -35,6 +35,39 @@ jobs:
         run: |
           $version = "${{ github.ref_name }}".TrimStart("v")
           ./deploy/windows/build.ps1 -Version $version
+      - name: Smoke-test Windows installer
+        shell: pwsh
+        run: |
+          $setup = (Resolve-Path artifacts/*-setup.exe).Path
+          $installRoot = Join-Path $env:RUNNER_TEMP "machineops-install"
+          $installer = Start-Process -FilePath $setup -ArgumentList @(
+            "/VERYSILENT",
+            "/SUPPRESSMSGBOXES",
+            "/NORESTART",
+            "/DIR=$installRoot"
+          ) -Wait -PassThru
+          if ($installer.ExitCode -ne 0) {
+            throw "Installer exited with $($installer.ExitCode)."
+          }
+
+          $application = Join-Path $installRoot "Yottaverse.MachineOps.Desktop.exe"
+          $process = Start-Process -FilePath $application -PassThru
+          Start-Sleep -Seconds 10
+          $process.Refresh()
+          if ($process.HasExited) {
+            throw "Installed application exited with $($process.ExitCode)."
+          }
+
+          Stop-Process -Id $process.Id
+          $uninstaller = Join-Path $installRoot "unins000.exe"
+          $removal = Start-Process -FilePath $uninstaller -ArgumentList @(
+            "/VERYSILENT",
+            "/SUPPRESSMSGBOXES",
+            "/NORESTART"
+          ) -Wait -PassThru
+          if ($removal.ExitCode -ne 0 -or (Test-Path $installRoot)) {
+            throw "Windows package removal failed."
+          }
       - uses: actions/upload-artifact@v4
         with:
           name: windows-packages
@@ -55,6 +88,29 @@ jobs:
         run: |
           chmod +x ./deploy/linux/build.sh
           ./deploy/linux/build.sh "${GITHUB_REF_NAME#v}"
+      - name: Smoke-test Debian package
+        shell: bash
+        run: |
+          docker build \
+            --file deploy/linux/Smoke.Dockerfile \
+            --tag machineops-linux-smoke .
+          docker run --rm \
+            --volume "${PWD}/artifacts:/packages:ro" \
+            machineops-linux-smoke \
+            bash -lc '
+              set -e
+              dpkg --install /packages/*.deb
+              set +e
+              timeout 10s xvfb-run -a machineops-workbench
+              launch_code=$?
+              set -e
+              if [ "${launch_code}" -ne 124 ]; then
+                echo "Unexpected launch exit: ${launch_code}"
+                exit 1
+              fi
+              dpkg --remove machineops-workbench
+              test ! -e /opt/machineops-workbench
+            '
       - uses: actions/upload-artifact@v4
         with:
           name: linux-packages
@@ -96,7 +152,7 @@ jobs:
         shell: bash
         run: |
           cd artifacts
-          sha256sum * > SHA256SUMS
+          sha256sum -- * > SHA256SUMS
       - uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true

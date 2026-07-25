@@ -1,0 +1,8 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Generated build and release output"
+paths = [
+  '''(^|/)(artifacts|bin|obj|TestResults)/''',
+]

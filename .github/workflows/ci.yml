@@ -22,11 +22,13 @@ jobs:
       - run: dotnet restore Yottaverse.MachineOps.slnx
       - run: dotnet format Yottaverse.MachineOps.slnx --verify-no-changes --no-restore
       - run: dotnet build Yottaverse.MachineOps.slnx --configuration Release --no-restore
-      - name: Unit and architecture tests
+      - name: Unit, desktop, OpenAPI and architecture tests
         shell: pwsh
         run: |
           dotnet test tests/Yottaverse.MachineOps.Core.Tests --configuration Release --no-build --collect:"XPlat Code Coverage"
           dotnet test tests/Yottaverse.MachineOps.Application.Tests --configuration Release --no-build --collect:"XPlat Code Coverage"
+          dotnet test tests/Yottaverse.MachineOps.Desktop.Tests --configuration Release --no-build --collect:"XPlat Code Coverage"
+          dotnet test tests/Yottaverse.MachineOps.Api.IntegrationTests --configuration Release --no-build --filter "HealthAndOpenApiDocumentsAreAvailable"
           dotnet test tests/Yottaverse.MachineOps.Architecture.Tests --configuration Release --no-build
           dotnet test tests/Yottaverse.MachineOps.Simulator.Tests --configuration Release --no-build --collect:"XPlat Code Coverage"
       - uses: actions/upload-artifact@v4
@@ -43,11 +45,55 @@ jobs:
         with:
           dotnet-version: 10.0.x
       - run: dotnet restore Yottaverse.MachineOps.slnx
-      - run: dotnet test tests/Yottaverse.MachineOps.Api.IntegrationTests --configuration Release
-      - run: dotnet test tests/Yottaverse.MachineOps.Infrastructure.IntegrationTests --configuration Release
+      - name: Full test suite with coverage
+        run: >
+          dotnet test Yottaverse.MachineOps.slnx
+          --configuration Release
+          --collect:"XPlat Code Coverage"
+          --results-directory TestResults
+      - name: Aggregate coverage
+        shell: pwsh
+        run: |
+          dotnet tool restore
+          dotnet tool run reportgenerator `
+            "-reports:TestResults/**/coverage.cobertura.xml" `
+            "-targetdir:artifacts/coverage" `
+            "-reporttypes:TextSummary;Cobertura"
+          $summary = Get-Content artifacts/coverage/Summary.txt -Raw
+          $match = [regex]::Match($summary, 'Line coverage:\s+([0-9.]+)%')
+          if (-not $match.Success) {
+            throw "ReportGenerator did not produce a line coverage value."
+          }
+
+          $lineCoverage = [double]::Parse(
+            $match.Groups[1].Value,
+            [Globalization.CultureInfo]::InvariantCulture)
+          Write-Host "Combined line coverage: $lineCoverage%"
+          if ($lineCoverage -lt 50) {
+            throw "Combined line coverage is below the 50% release floor."
+          }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: combined-coverage
+          path: artifacts/coverage
       - name: Compose smoke test
         shell: bash
         run: |
           docker compose up -d --build --wait
           curl --fail --retry 12 --retry-delay 2 http://localhost:5080/health/ready
           docker compose down -v
+
+  container-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build API image
+        run: docker build --file deploy/docker/Api.Dockerfile --tag machineops-api:ci .
+      - uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: machineops-api:ci
+          format: table
+          exit-code: '1'
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
