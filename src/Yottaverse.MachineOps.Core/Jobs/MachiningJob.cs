@@ -53,4 +53,16 @@ public sealed class MachiningJob
 
         return new MachiningJob(id, name.Trim(), program, createdAtUtc);
     }
+
+    public static MachiningJob Rehydrate(
+        Guid id,
+        string name,
+        ParsedGCodeProgram program,
+        DateTimeOffset createdAtUtc,
+        JobState state)
+    {
+        MachiningJob job = Create(id, name, program, createdAtUtc);
+        job.State = state;
+        return job;
+    }
 }

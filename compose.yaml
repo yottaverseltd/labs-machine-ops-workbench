@@ -1,0 +1,22 @@
+name: machineops
+
+services:
+  postgres:
+    image: postgres:18.4-alpine3.24
+    environment:
+      POSTGRES_DB: machineops
+      POSTGRES_USER: machineops
+      POSTGRES_PASSWORD: machineops
+    ports:
+      - "5438:5432"
+    volumes:
+      - machineops-postgres:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U machineops -d machineops"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+
+volumes:
+  machineops-postgres:

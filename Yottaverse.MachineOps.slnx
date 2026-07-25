@@ -5,11 +5,13 @@
     <Project Path="src/Yottaverse.MachineOps.Contracts/Yottaverse.MachineOps.Contracts.csproj" />
     <Project Path="src/Yottaverse.MachineOps.Core/Yottaverse.MachineOps.Core.csproj" />
     <Project Path="src/Yottaverse.MachineOps.Desktop/Yottaverse.MachineOps.Desktop.csproj" />
+    <Project Path="src/Yottaverse.MachineOps.Infrastructure/Yottaverse.MachineOps.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Yottaverse.MachineOps.Api.IntegrationTests/Yottaverse.MachineOps.Api.IntegrationTests.csproj" />
     <Project Path="tests/Yottaverse.MachineOps.Application.Tests/Yottaverse.MachineOps.Application.Tests.csproj" />
     <Project Path="tests/Yottaverse.MachineOps.Architecture.Tests/Yottaverse.MachineOps.Architecture.Tests.csproj" />
     <Project Path="tests/Yottaverse.MachineOps.Core.Tests/Yottaverse.MachineOps.Core.Tests.csproj" />
+    <Project Path="tests/Yottaverse.MachineOps.Infrastructure.IntegrationTests/Yottaverse.MachineOps.Infrastructure.IntegrationTests.csproj" />
   </Folder>
 </Solution>

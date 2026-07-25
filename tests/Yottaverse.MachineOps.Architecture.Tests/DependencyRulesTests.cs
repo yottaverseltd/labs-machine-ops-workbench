@@ -3,6 +3,7 @@ using Yottaverse.MachineOps.Application.Jobs;
 using Yottaverse.MachineOps.Contracts.Jobs;
 using Yottaverse.MachineOps.Core.GCode;
 using Yottaverse.MachineOps.Desktop.ViewModels;
+using Yottaverse.MachineOps.Infrastructure.Database;
 
 namespace Yottaverse.MachineOps.Architecture.Tests;
 
@@ -42,6 +43,17 @@ public sealed class DependencyRulesTests
         string[] references = GetReferences(typeof(JobDto).Assembly);
 
         Assert.DoesNotContain(references, name => name.StartsWith("Yottaverse.MachineOps.", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void InfrastructureDoesNotReferenceApiOrDesktop()
+    {
+        string[] references = GetReferences(typeof(DapperJobRepository).Assembly);
+
+        Assert.Contains("Yottaverse.MachineOps.Application", references);
+        Assert.Contains("Yottaverse.MachineOps.Core", references);
+        Assert.DoesNotContain("Yottaverse.MachineOps.Api", references);
+        Assert.DoesNotContain("Yottaverse.MachineOps.Desktop", references);
     }
 
     private static string[] GetReferences(Assembly assembly) =>

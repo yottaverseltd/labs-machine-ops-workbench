@@ -17,12 +17,20 @@ program can be saved through a versioned HTTP contract.
 - Report unsupported arc motion and invalid feed rates
 - Preview rapid and cutting moves on a responsive XY surface
 - Save validated jobs through an ASP.NET Core API
+- Persist jobs in PostgreSQL through parameterised Dapper queries
+- Apply ordered, transactional SQL migrations on API startup
 - Inspect the generated OpenAPI document at `/openapi/v1.json`
 - Run entirely offline on Windows, Linux, and macOS
 
 ## Run it
 
-Install the .NET 10 SDK. Start the API:
+Install the .NET 10 SDK and Docker Desktop. Start PostgreSQL:
+
+```shell
+docker compose up -d postgres
+```
+
+Start the API:
 
 ```shell
 dotnet restore
