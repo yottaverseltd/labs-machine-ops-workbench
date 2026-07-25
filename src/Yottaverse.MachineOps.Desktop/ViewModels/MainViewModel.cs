@@ -1,6 +1,8 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Yottaverse.MachineOps.Contracts.Jobs;
+using Yottaverse.MachineOps.Contracts.Machines;
+using Yottaverse.MachineOps.Contracts.Runs;
 using Yottaverse.MachineOps.Core.GCode;
 using Yottaverse.MachineOps.Desktop.Services;
 
@@ -12,6 +14,7 @@ public partial class MainViewModel : ViewModelBase
     private readonly GCodeParser parser;
     private readonly IMachineOpsApiClient apiClient;
     private ParsedGCodeProgram? currentProgram;
+    private Guid? savedJobId;
 
     public MainViewModel()
         : this(new DesignFilePicker(), new GCodeParser(), new DesignApiClient())
@@ -65,6 +68,21 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     public partial bool IsBusy { get; private set; }
 
+    [ObservableProperty]
+    public partial string MachineStatus { get; private set; } = "Disconnected";
+
+    [ObservableProperty]
+    public partial string MachinePosition { get; private set; } = "X 0.000  Y 0.000  Z 0.000";
+
+    [ObservableProperty]
+    public partial string ControllerError { get; private set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string RunState { get; private set; } = "No active run";
+
+    [ObservableProperty]
+    public partial double RunProgress { get; private set; }
+
     [RelayCommand]
     private async Task OpenFileAsync()
     {
@@ -108,7 +126,9 @@ public partial class MainViewModel : ViewModelBase
                 new CreateJobRequest(currentProgram.Name, currentProgram.Source),
                 CancellationToken.None);
             SavedJobReference = job.Id.ToString("N")[..8].ToUpperInvariant();
+            savedJobId = job.Id;
             Status = $"Saved {job.Name} through the API.";
+            StartRunCommand.NotifyCanExecuteChanged();
         }
         catch (HttpRequestException)
         {
@@ -124,6 +144,119 @@ public partial class MainViewModel : ViewModelBase
         {
             IsBusy = false;
             SaveJobCommand.NotifyCanExecuteChanged();
+        }
+    }
+
+    [RelayCommand]
+    private async Task ConnectSimulatorAsync()
+    {
+        try
+        {
+            ControllerError = string.Empty;
+            MachineStatus = "Connecting";
+            MachineSnapshotDto snapshot = await apiClient.ConnectSimulatorAsync(
+                5099,
+                CancellationToken.None);
+            ApplySnapshot(snapshot);
+            Status = "Simulator connected through the API.";
+        }
+        catch (Exception exception) when (
+            exception is HttpRequestException or TaskCanceledException or InvalidDataException)
+        {
+            MachineStatus = "Connection failed";
+            ControllerError = exception.Message;
+            Status = "The simulator could not be reached on port 5099.";
+        }
+    }
+
+    [RelayCommand]
+    private async Task DisconnectSimulatorAsync()
+    {
+        try
+        {
+            await apiClient.DisconnectSimulatorAsync(CancellationToken.None);
+            ApplySnapshot(await apiClient.GetMachineSnapshotAsync(
+                false,
+                CancellationToken.None));
+            Status = "Simulator disconnected.";
+        }
+        catch (HttpRequestException exception)
+        {
+            ControllerError = exception.Message;
+            Status = "The API could not disconnect the simulator cleanly.";
+        }
+    }
+
+    private bool CanStartRun() => savedJobId.HasValue;
+
+    [RelayCommand(CanExecute = nameof(CanStartRun))]
+    private async Task StartRunAsync()
+    {
+        if (savedJobId is not Guid jobId)
+        {
+            return;
+        }
+
+        try
+        {
+            JobRunDto run = await apiClient.StartRunAsync(jobId, CancellationToken.None);
+            ApplyRun(run);
+            while (run.State is "Running" or "Paused")
+            {
+                await Task.Delay(250);
+                ApplySnapshot(await apiClient.GetMachineSnapshotAsync(
+                    true,
+                    CancellationToken.None));
+                run = await apiClient.RefreshRunAsync(CancellationToken.None);
+                ApplyRun(run);
+            }
+
+            Status = $"Run finished with state {run.State}.";
+        }
+        catch (Exception exception) when (
+            exception is HttpRequestException or TaskCanceledException or InvalidDataException)
+        {
+            ControllerError = exception.Message;
+            Status = "The run command failed.";
+        }
+    }
+
+    [RelayCommand]
+    private async Task PauseRunAsync() => await SendRunCommandAsync("pause");
+
+    [RelayCommand]
+    private async Task ResumeRunAsync() => await SendRunCommandAsync("resume");
+
+    [RelayCommand]
+    private async Task CancelRunAsync() => await SendRunCommandAsync("cancel");
+
+    private async Task SendRunCommandAsync(string command)
+    {
+        try
+        {
+            ApplyRun(await apiClient.SendRunCommandAsync(command, CancellationToken.None));
+        }
+        catch (HttpRequestException exception)
+        {
+            ControllerError = exception.Message;
+        }
+    }
+
+    private void ApplySnapshot(MachineSnapshotDto snapshot)
+    {
+        MachineStatus = $"{snapshot.ConnectionStatus} / {snapshot.OperatingStatus}";
+        MachinePosition =
+            $"X {snapshot.X:0.000}  Y {snapshot.Y:0.000}  Z {snapshot.Z:0.000}";
+        ControllerError = snapshot.LastError ?? string.Empty;
+        RunProgress = snapshot.Progress;
+    }
+
+    private void ApplyRun(JobRunDto run)
+    {
+        RunState = run.State;
+        if (run.State == "Completed")
+        {
+            RunProgress = 100;
         }
     }
 
@@ -144,6 +277,8 @@ public partial class MainViewModel : ViewModelBase
             ? $"Ready to inspect. {program.Segments.Count} moves parsed."
             : "The program has validation errors.";
         SavedJobReference = "Not saved";
+        savedJobId = null;
+        StartRunCommand.NotifyCanExecuteChanged();
         SaveJobCommand.NotifyCanExecuteChanged();
     }
 
@@ -159,6 +294,45 @@ public partial class MainViewModel : ViewModelBase
 
         public Task<JobDto> CreateJobAsync(
             CreateJobRequest request,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<MachineSnapshotDto> ConnectSimulatorAsync(
+            int port,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new MachineSnapshotDto(
+                Guid.Parse("e0df4a6f-5578-4d53-85b0-17f3828b087d"),
+                "Connected",
+                "Idle",
+                0,
+                0,
+                5,
+                null,
+                null,
+                0,
+                0,
+                1,
+                null,
+                DateTimeOffset.UtcNow));
+
+        public Task<MachineSnapshotDto> GetMachineSnapshotAsync(
+            bool refresh,
+            CancellationToken cancellationToken) =>
+            ConnectSimulatorAsync(5099, cancellationToken);
+
+        public Task DisconnectSimulatorAsync(CancellationToken cancellationToken) =>
+            Task.CompletedTask;
+
+        public Task<JobRunDto> StartRunAsync(
+            Guid jobId,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<JobRunDto> RefreshRunAsync(CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<JobRunDto> SendRunCommandAsync(
+            string command,
             CancellationToken cancellationToken) =>
             throw new NotSupportedException();
     }

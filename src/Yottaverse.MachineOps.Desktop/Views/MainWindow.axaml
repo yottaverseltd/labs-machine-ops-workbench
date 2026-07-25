@@ -54,7 +54,7 @@
       </Grid>
     </Border>
 
-    <Grid Grid.Row="1" Margin="22" ColumnDefinitions="260,*,350" ColumnSpacing="16">
+    <Grid Grid.Row="1" Margin="22" ColumnDefinitions="290,*,350" ColumnSpacing="16">
       <Border Grid.Column="0" Classes="card">
         <Grid RowDefinitions="Auto,Auto,20,Auto,14,Auto,14,Auto,*">
           <TextBlock Text="PROGRAM" Classes="eyebrow" />
@@ -102,6 +102,54 @@
               </Grid>
             </Border>
           </StackPanel>
+
+          <Border Grid.Row="8" Margin="0,14,0,0" Classes="metric" VerticalAlignment="Bottom">
+            <StackPanel Spacing="8">
+              <TextBlock Text="SIMULATOR" Classes="eyebrow" />
+              <TextBlock Text="{Binding MachineStatus}" FontSize="14" FontWeight="SemiBold" />
+              <TextBlock Text="{Binding MachinePosition}"
+                         Classes="muted"
+                         FontSize="10"
+                         FontFamily="Cascadia Mono, Consolas, monospace" />
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="{Binding RunState}" Classes="muted" FontSize="10" />
+                <TextBlock Grid.Column="1"
+                           Text="{Binding RunProgress, StringFormat='{}{0:0}%'}"
+                           Foreground="#41D6A3"
+                           FontSize="10" />
+              </Grid>
+              <ProgressBar Minimum="0"
+                           Maximum="100"
+                           Value="{Binding RunProgress}"
+                           Height="4"
+                           ShowProgressText="False" />
+              <TextBlock Text="{Binding ControllerError}"
+                         Foreground="#F17D85"
+                         FontSize="10"
+                         TextWrapping="Wrap" />
+              <Grid ColumnDefinitions="*,*" ColumnSpacing="7">
+                <Button Classes="primary"
+                        Command="{Binding ConnectSimulatorCommand}"
+                        Content="Connect" />
+                <Button Grid.Column="1"
+                        Classes="secondary"
+                        Command="{Binding DisconnectSimulatorCommand}"
+                        Content="Disconnect" />
+              </Grid>
+              <Button Classes="primary" Command="{Binding StartRunCommand}" Content="Start saved job" />
+              <Grid ColumnDefinitions="*,*,*" ColumnSpacing="5">
+                <Button Classes="secondary" Command="{Binding PauseRunCommand}" Content="Pause" />
+                <Button Grid.Column="1"
+                        Classes="secondary"
+                        Command="{Binding ResumeRunCommand}"
+                        Content="Resume" />
+                <Button Grid.Column="2"
+                        Classes="secondary"
+                        Command="{Binding CancelRunCommand}"
+                        Content="Cancel" />
+              </Grid>
+            </StackPanel>
+          </Border>
         </Grid>
       </Border>
 

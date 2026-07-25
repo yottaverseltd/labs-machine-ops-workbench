@@ -3,8 +3,11 @@ using Npgsql;
 using Yottaverse.MachineOps.Api.Persistence;
 using Yottaverse.MachineOps.Application.Abstractions;
 using Yottaverse.MachineOps.Application.Jobs;
+using Yottaverse.MachineOps.Application.Machines;
+using Yottaverse.MachineOps.Application.Runs;
 using Yottaverse.MachineOps.Contracts.Jobs;
 using Yottaverse.MachineOps.Core.GCode;
+using Yottaverse.MachineOps.Infrastructure.Controller;
 using Yottaverse.MachineOps.Infrastructure.Database;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(
@@ -27,6 +30,8 @@ bool useVolatileStorage = builder.Environment.IsEnvironment("Testing");
 if (useVolatileStorage)
 {
     builder.Services.AddSingleton<IJobRepository, InMemoryJobRepository>();
+    builder.Services.AddSingleton<IRunRepository, InMemoryRunRepository>();
+    builder.Services.AddSingleton<IControllerAuditStore, InMemoryControllerAuditStore>();
 }
 else
 {
@@ -34,12 +39,21 @@ else
         ?? throw new InvalidOperationException("ConnectionStrings:MachineOps is required.");
     builder.Services.AddSingleton(_ => NpgsqlDataSource.Create(connectionString));
     builder.Services.AddSingleton<DatabaseMigrator>();
-    builder.Services.AddScoped<IJobRepository, DapperJobRepository>();
+    builder.Services.AddSingleton<IJobRepository, DapperJobRepository>();
+    builder.Services.AddSingleton<IRunRepository, DapperRunRepository>();
+    builder.Services.AddSingleton<IControllerAuditStore, DapperControllerAuditStore>();
 }
 
 builder.Services.AddScoped<CreateJobHandler>();
 builder.Services.AddScoped<GetJobHandler>();
 builder.Services.AddScoped<ListJobsHandler>();
+builder.Services.AddSingleton<TcpControllerSession>();
+builder.Services.AddSingleton<IControllerSession>(
+    services => services.GetRequiredService<TcpControllerSession>());
+builder.Services.AddScoped<ConnectSimulatorHandler>();
+builder.Services.AddScoped<GetMachineSnapshotHandler>();
+builder.Services.AddScoped<DisconnectMachineHandler>();
+builder.Services.AddSingleton<RunCoordinator>();
 
 WebApplication app = builder.Build();
 
@@ -54,7 +68,7 @@ app.MapOpenApi();
 app.MapGet(
         "/health",
         (TimeProvider timeProvider) => TypedResults.Ok(
-            new ApiStatusDto("MachineOps API", "0.3.0", timeProvider.GetUtcNow())))
+            new ApiStatusDto("MachineOps API", "0.4.0", timeProvider.GetUtcNow())))
     .WithName("GetApiStatus")
     .WithTags("Operations");
 if (!useVolatileStorage)

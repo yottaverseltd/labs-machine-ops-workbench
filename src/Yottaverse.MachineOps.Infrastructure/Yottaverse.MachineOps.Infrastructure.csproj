@@ -8,6 +8,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Yottaverse.MachineOps.Application\Yottaverse.MachineOps.Application.csproj" />
     <ProjectReference Include="..\Yottaverse.MachineOps.Core\Yottaverse.MachineOps.Core.csproj" />
+    <ProjectReference Include="..\Yottaverse.MachineOps.Contracts\Yottaverse.MachineOps.Contracts.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

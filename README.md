@@ -19,6 +19,10 @@ program can be saved through a versioned HTTP contract.
 - Save validated jobs through an ASP.NET Core API
 - Persist jobs in PostgreSQL through parameterised Dapper queries
 - Apply ordered, transactional SQL migrations on API startup
+- Connect to the deterministic TCP simulator
+- Start, pause, resume, and cancel a simulated run
+- Persist run state and the complete command and response transcript
+- Exercise malformed, slow, duplicate, out-of-order, alarm, disconnect, and burst scenarios
 - Inspect the generated OpenAPI document at `/openapi/v1.json`
 - Run entirely offline on Windows, Linux, and macOS
 
@@ -37,7 +41,13 @@ dotnet restore
 dotnet run --project src/Yottaverse.MachineOps.Api
 ```
 
-Then start the desktop app in another terminal:
+Start the simulator in another terminal:
+
+```shell
+dotnet run --project src/Yottaverse.MachineOps.Simulator
+```
+
+Then start the desktop app:
 
 ```shell
 dotnet run --project src/Yottaverse.MachineOps.Desktop
@@ -45,7 +55,9 @@ dotnet run --project src/Yottaverse.MachineOps.Desktop
 
 The app opens with `samples/gcode/simple-pocket.ngc` already loaded. Choose
 **Save job** to send it to the API. Local import and preview still work while
-the API is stopped.
+the API is stopped. Use **Connect**, then **Start saved job** to execute the
+sample. The run advances in fixed ten percent steps so a test failure can be
+reproduced exactly.
 
 ## Verify it
 
