@@ -93,6 +93,25 @@ public sealed class TcpControllerSessionTests
         Assert.Equal(OperatingStatus.Idle, cancelled.OperatingStatus);
     }
 
+    [Fact]
+    public async Task AlarmScenarioRaisesAControllerAlarm()
+    {
+        await using SimulatorServer server = await StartServerAsync(SimulatorScenario.Alarm);
+        await using TcpControllerSession session = CreateSession();
+        TaskCompletionSource<ControllerAlarmEventArgs> alarmReceived =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        session.AlarmRaised += (_, eventArgs) => alarmReceived.TrySetResult(eventArgs);
+
+        await session.ConnectAsync(
+            ConnectionOptions(Guid.NewGuid(), server.BoundPort),
+            CancellationToken.None);
+        ControllerAlarmEventArgs alarm = await alarmReceived.Task.WaitAsync(
+            TimeSpan.FromSeconds(2));
+
+        Assert.Equal("E_STOP", alarm.Code);
+        Assert.Contains("Emergency stop", alarm.Message, StringComparison.Ordinal);
+    }
+
     private static ControllerConnectionOptions ConnectionOptions(Guid machineId, int port) =>
         new(machineId, "127.0.0.1", port, TimeSpan.FromSeconds(2));
 

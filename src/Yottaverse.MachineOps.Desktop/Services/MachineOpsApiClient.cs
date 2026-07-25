@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using Yottaverse.MachineOps.Contracts.Alarms;
 using Yottaverse.MachineOps.Contracts.Jobs;
 using Yottaverse.MachineOps.Contracts.Machines;
 using Yottaverse.MachineOps.Contracts.Runs;
@@ -96,6 +97,26 @@ public sealed class MachineOpsApiClient : IMachineOpsApiClient
             cancellationToken);
         response.EnsureSuccessStatusCode();
         return await ReadRunAsync(response, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<AlarmDto>> ListAlarmsAsync(
+        CancellationToken cancellationToken) =>
+        await httpClient.GetFromJsonAsync<AlarmDto[]>(
+            "api/alarms?take=50",
+            cancellationToken) ?? [];
+
+    public async Task<AlarmDto> AcknowledgeAlarmAsync(
+        Guid alarmId,
+        AcknowledgeAlarmRequest request,
+        CancellationToken cancellationToken)
+    {
+        using HttpResponseMessage response = await httpClient.PostAsJsonAsync(
+            $"api/alarms/{alarmId}/acknowledgements",
+            request,
+            cancellationToken);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<AlarmDto>(cancellationToken) ??
+            throw new InvalidDataException("The API returned an empty alarm response.");
     }
 
     private static async Task<MachineSnapshotDto> ReadMachineSnapshotAsync(

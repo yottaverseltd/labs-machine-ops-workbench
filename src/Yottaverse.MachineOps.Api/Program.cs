@@ -3,6 +3,7 @@ using Npgsql;
 using Yottaverse.MachineOps.Api.Live;
 using Yottaverse.MachineOps.Api.Persistence;
 using Yottaverse.MachineOps.Application.Abstractions;
+using Yottaverse.MachineOps.Application.Alarms;
 using Yottaverse.MachineOps.Application.Jobs;
 using Yottaverse.MachineOps.Application.Machines;
 using Yottaverse.MachineOps.Application.Runs;
@@ -10,6 +11,7 @@ using Yottaverse.MachineOps.Contracts.Jobs;
 using Yottaverse.MachineOps.Core.GCode;
 using Yottaverse.MachineOps.Infrastructure.Controller;
 using Yottaverse.MachineOps.Infrastructure.Database;
+using Yottaverse.MachineOps.Infrastructure.Diagnostics;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(
     new WebApplicationOptions
@@ -34,6 +36,9 @@ if (useVolatileStorage)
     builder.Services.AddSingleton<IJobRepository, InMemoryJobRepository>();
     builder.Services.AddSingleton<IRunRepository, InMemoryRunRepository>();
     builder.Services.AddSingleton<IControllerAuditStore, InMemoryControllerAuditStore>();
+    builder.Services.AddSingleton<IAlarmRepository, InMemoryAlarmRepository>();
+    builder.Services.AddSingleton<IOutboxStore, InMemoryOutboxStore>();
+    builder.Services.AddSingleton<IDiagnosticExporter, InMemoryDiagnosticExporter>();
 }
 else
 {
@@ -44,6 +49,9 @@ else
     builder.Services.AddSingleton<IJobRepository, DapperJobRepository>();
     builder.Services.AddSingleton<IRunRepository, DapperRunRepository>();
     builder.Services.AddSingleton<IControllerAuditStore, DapperControllerAuditStore>();
+    builder.Services.AddSingleton<IAlarmRepository, DapperAlarmRepository>();
+    builder.Services.AddSingleton<IOutboxStore, DapperOutboxStore>();
+    builder.Services.AddSingleton<IDiagnosticExporter, ZipDiagnosticExporter>();
 }
 
 builder.Services.AddScoped<CreateJobHandler>();
@@ -56,8 +64,11 @@ builder.Services.AddScoped<ConnectSimulatorHandler>();
 builder.Services.AddScoped<GetMachineSnapshotHandler>();
 builder.Services.AddScoped<DisconnectMachineHandler>();
 builder.Services.AddSingleton<RunCoordinator>();
+builder.Services.AddSingleton<AlarmService>();
 builder.Services.AddHostedService<MachineUpdateBroadcaster>();
 builder.Services.AddHostedService<RunMonitorService>();
+builder.Services.AddHostedService<AlarmIngestService>();
+builder.Services.AddHostedService<OutboxPublisherService>();
 
 WebApplication app = builder.Build();
 
@@ -68,11 +79,23 @@ if (!useVolatileStorage)
 }
 
 app.UseExceptionHandler();
+app.Use(
+    async (context, next) =>
+    {
+        string correlationId = context.Request.Headers["X-Correlation-ID"].FirstOrDefault()
+            ?? Guid.NewGuid().ToString("N");
+        context.Response.Headers["X-Correlation-ID"] = correlationId;
+        using IDisposable? scope = context.RequestServices
+            .GetRequiredService<ILoggerFactory>()
+            .CreateLogger("MachineOps.Request")
+            .BeginScope(new Dictionary<string, object> { ["CorrelationId"] = correlationId });
+        await next(context);
+    });
 app.MapOpenApi();
 app.MapGet(
         "/health",
         (TimeProvider timeProvider) => TypedResults.Ok(
-            new ApiStatusDto("MachineOps API", "0.5.0", timeProvider.GetUtcNow())))
+            new ApiStatusDto("MachineOps API", "0.6.0", timeProvider.GetUtcNow())))
     .WithName("GetApiStatus")
     .WithTags("Operations");
 if (!useVolatileStorage)

@@ -24,6 +24,9 @@ program can be saved through a versioned HTTP contract.
 - Receive reduced live snapshots through SignalR
 - Reconnect the live channel and resynchronise from the API snapshot
 - Persist run state and the complete command and response transcript
+- Raise and acknowledge alarms with idempotency and version checks
+- Publish alarm notifications through a transactional outbox
+- Export a ZIP diagnostic bundle from the API
 - Exercise malformed, slow, duplicate, out-of-order, alarm, disconnect, and burst scenarios
 - Inspect the generated OpenAPI document at `/openapi/v1.json`
 - Run entirely offline on Windows, Linux, and macOS

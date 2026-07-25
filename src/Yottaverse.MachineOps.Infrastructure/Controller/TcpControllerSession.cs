@@ -36,6 +36,8 @@ public sealed class TcpControllerSession : IControllerSession, IAsyncDisposable
 
     public event EventHandler<MachineSnapshotChangedEventArgs>? SnapshotChanged;
 
+    public event EventHandler<ControllerAlarmEventArgs>? AlarmRaised;
+
     public MachineSnapshot Snapshot
     {
         get
@@ -269,6 +271,16 @@ public sealed class TcpControllerSession : IControllerSession, IAsyncDisposable
                 if (message.State is not null && message.Sequence > Snapshot.Sequence)
                 {
                     SetSnapshot(MapState(Snapshot, message));
+                }
+
+                if (message.Type == ControllerMessageTypes.Alarm)
+                {
+                    AlarmRaised?.Invoke(
+                        this,
+                        new ControllerAlarmEventArgs(
+                            $"{auditSessionId:N}:{message.Sequence}",
+                            message.AlarmCode ?? "CONTROLLER",
+                            message.Error ?? "The controller raised an alarm."));
                 }
             }
 

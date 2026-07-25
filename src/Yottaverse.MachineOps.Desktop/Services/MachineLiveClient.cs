@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.SignalR.Client;
+using Yottaverse.MachineOps.Contracts.Alarms;
 using Yottaverse.MachineOps.Contracts.Live;
 using Yottaverse.MachineOps.Contracts.Machines;
 
@@ -10,6 +11,8 @@ public sealed class MachineLiveClient : IMachineLiveClient
     private readonly IMachineOpsApiClient apiClient;
     private readonly HubConnection connection;
     private readonly IDisposable snapshotSubscription;
+    private readonly IDisposable alarmRaisedSubscription;
+    private readonly IDisposable alarmAcknowledgedSubscription;
 
     public MachineLiveClient(Uri apiAddress, IMachineOpsApiClient apiClient)
     {
@@ -27,6 +30,12 @@ public sealed class MachineLiveClient : IMachineLiveClient
         snapshotSubscription = connection.On<MachineSnapshotDto>(
             MachineLiveEventNames.SnapshotChanged,
             snapshot => RaiseSnapshot(snapshot));
+        alarmRaisedSubscription = connection.On<AlarmNotificationDto>(
+            MachineLiveEventNames.AlarmRaised,
+            alarm => AlarmReceived?.Invoke(this, new LiveAlarmEventArgs(alarm)));
+        alarmAcknowledgedSubscription = connection.On<AlarmNotificationDto>(
+            MachineLiveEventNames.AlarmAcknowledged,
+            alarm => AlarmReceived?.Invoke(this, new LiveAlarmEventArgs(alarm)));
         connection.Reconnecting += _ =>
         {
             RaiseConnectionState("Reconnecting");
@@ -46,6 +55,8 @@ public sealed class MachineLiveClient : IMachineLiveClient
     public event EventHandler<LiveSnapshotEventArgs>? SnapshotReceived;
 
     public event EventHandler<LiveConnectionStateEventArgs>? ConnectionStateChanged;
+
+    public event EventHandler<LiveAlarmEventArgs>? AlarmReceived;
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -70,6 +81,8 @@ public sealed class MachineLiveClient : IMachineLiveClient
     public async ValueTask DisposeAsync()
     {
         snapshotSubscription.Dispose();
+        alarmRaisedSubscription.Dispose();
+        alarmAcknowledgedSubscription.Dispose();
         await connection.DisposeAsync();
         startGate.Dispose();
     }

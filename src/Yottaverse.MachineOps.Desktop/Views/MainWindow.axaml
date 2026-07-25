@@ -129,6 +129,24 @@
                          Foreground="#F17D85"
                          FontSize="10"
                          TextWrapping="Wrap" />
+              <Border Background="#331E24"
+                      BorderBrush="#71333D"
+                      BorderThickness="1"
+                      CornerRadius="4"
+                      Padding="8"
+                      IsVisible="{Binding HasOpenAlarm}">
+                <StackPanel Spacing="6">
+                  <TextBlock Text="{Binding AlarmStatus}"
+                             Foreground="#F39AA2"
+                             FontSize="10"
+                             TextWrapping="Wrap" />
+                  <Button Classes="secondary"
+                          Padding="8,5"
+                          FontSize="10"
+                          Command="{Binding AcknowledgeAlarmCommand}"
+                          Content="Acknowledge" />
+                </StackPanel>
+              </Border>
               <Grid ColumnDefinitions="*,*" ColumnSpacing="7">
                 <Button Classes="primary"
                         Command="{Binding ConnectSimulatorCommand}"

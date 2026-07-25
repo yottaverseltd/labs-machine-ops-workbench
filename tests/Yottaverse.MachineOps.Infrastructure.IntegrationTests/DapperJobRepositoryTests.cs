@@ -92,6 +92,6 @@ public sealed class DapperJobRepositoryTests
             "SELECT COUNT(*) FROM schema_versions;",
             connection);
         object? count = await command.ExecuteScalarAsync(CancellationToken.None);
-        Assert.Equal(1L, count);
+        Assert.Equal(2L, count);
     }
 }

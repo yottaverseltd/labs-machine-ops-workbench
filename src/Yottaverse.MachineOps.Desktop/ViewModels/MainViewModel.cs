@@ -1,6 +1,7 @@
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Yottaverse.MachineOps.Contracts.Alarms;
 using Yottaverse.MachineOps.Contracts.Jobs;
 using Yottaverse.MachineOps.Contracts.Machines;
 using Yottaverse.MachineOps.Contracts.Runs;
@@ -20,6 +21,8 @@ public partial class MainViewModel : ViewModelBase
     private Guid? savedJobId;
     private MachineSnapshotDto? pendingLiveSnapshot;
     private int liveDispatchScheduled;
+    private Guid? currentAlarmId;
+    private int currentAlarmVersion;
 
     public MainViewModel()
         : this(
@@ -42,6 +45,7 @@ public partial class MainViewModel : ViewModelBase
         this.liveClient = liveClient;
         liveClient.SnapshotReceived += OnLiveSnapshotReceived;
         liveClient.ConnectionStateChanged += OnLiveConnectionStateChanged;
+        liveClient.AlarmReceived += OnLiveAlarmReceived;
         LoadProgram("simple-pocket.ngc", DemoPrograms.SimplePocket);
     }
 
@@ -98,6 +102,12 @@ public partial class MainViewModel : ViewModelBase
 
     [ObservableProperty]
     public partial double RunProgress { get; private set; }
+
+    [ObservableProperty]
+    public partial string AlarmStatus { get; private set; } = "No open alarm";
+
+    [ObservableProperty]
+    public partial bool HasOpenAlarm { get; private set; }
 
     [RelayCommand]
     private async Task OpenFileAsync()
@@ -256,6 +266,32 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
+    [RelayCommand]
+    private async Task AcknowledgeAlarmAsync()
+    {
+        if (currentAlarmId is not Guid alarmId)
+        {
+            return;
+        }
+
+        try
+        {
+            AlarmDto alarm = await apiClient.AcknowledgeAlarmAsync(
+                alarmId,
+                new AcknowledgeAlarmRequest(
+                    Guid.NewGuid(),
+                    Environment.UserName,
+                    "Acknowledged from the workbench.",
+                    currentAlarmVersion),
+                CancellationToken.None);
+            ApplyAlarm(alarm.Id, alarm.Code, alarm.Message, alarm.Version, alarm.IsAcknowledged);
+        }
+        catch (HttpRequestException exception)
+        {
+            ControllerError = exception.Message;
+        }
+    }
+
     private void ApplySnapshot(MachineSnapshotDto snapshot)
     {
         MachineStatus = $"{snapshot.ConnectionStatus} / {snapshot.OperatingStatus}";
@@ -316,6 +352,28 @@ public partial class MainViewModel : ViewModelBase
         object? sender,
         LiveConnectionStateEventArgs eventArgs) =>
         Dispatcher.UIThread.Post(() => LiveStatus = $"Live feed {eventArgs.State.ToLowerInvariant()}");
+
+    private void OnLiveAlarmReceived(object? sender, LiveAlarmEventArgs eventArgs) =>
+        Dispatcher.UIThread.Post(
+            () => ApplyAlarm(
+                eventArgs.Alarm.Id,
+                eventArgs.Alarm.Code,
+                eventArgs.Alarm.Message,
+                eventArgs.Alarm.Version,
+                eventArgs.Alarm.IsAcknowledged));
+
+    private void ApplyAlarm(
+        Guid id,
+        string code,
+        string message,
+        int version,
+        bool acknowledged)
+    {
+        currentAlarmId = acknowledged ? null : id;
+        currentAlarmVersion = version;
+        HasOpenAlarm = !acknowledged;
+        AlarmStatus = acknowledged ? $"{code} acknowledged" : $"{code}: {message}";
+    }
 
     private void LoadProgram(string name, string source)
     {
@@ -392,6 +450,16 @@ public partial class MainViewModel : ViewModelBase
             string command,
             CancellationToken cancellationToken) =>
             throw new NotSupportedException();
+
+        public Task<IReadOnlyList<AlarmDto>> ListAlarmsAsync(
+            CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<AlarmDto>>([]);
+
+        public Task<AlarmDto> AcknowledgeAlarmAsync(
+            Guid alarmId,
+            AcknowledgeAlarmRequest request,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
     }
 
     private sealed class DesignLiveClient : IMachineLiveClient
@@ -399,6 +467,8 @@ public partial class MainViewModel : ViewModelBase
         public event EventHandler<LiveSnapshotEventArgs>? SnapshotReceived;
 
         public event EventHandler<LiveConnectionStateEventArgs>? ConnectionStateChanged;
+
+        public event EventHandler<LiveAlarmEventArgs>? AlarmReceived;
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
@@ -422,6 +492,17 @@ public partial class MainViewModel : ViewModelBase
                         1,
                         null,
                         DateTimeOffset.UtcNow)));
+            AlarmReceived?.Invoke(
+                this,
+                new LiveAlarmEventArgs(
+                    new AlarmNotificationDto(
+                        Guid.NewGuid(),
+                        Guid.Parse("e0df4a6f-5578-4d53-85b0-17f3828b087d"),
+                        "E_STOP",
+                        "Emergency stop input is active.",
+                        0,
+                        false,
+                        DateTimeOffset.UtcNow)));
             return Task.CompletedTask;
         }
 
@@ -429,6 +510,7 @@ public partial class MainViewModel : ViewModelBase
         {
             SnapshotReceived = null;
             ConnectionStateChanged = null;
+            AlarmReceived = null;
             return ValueTask.CompletedTask;
         }
     }

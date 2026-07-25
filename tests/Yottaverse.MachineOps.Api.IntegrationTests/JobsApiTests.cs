@@ -3,7 +3,11 @@ using System.Net.Http.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Extensions.DependencyInjection;
+using Yottaverse.MachineOps.Application.Alarms;
+using Yottaverse.MachineOps.Contracts.Alarms;
 using Yottaverse.MachineOps.Contracts.Jobs;
+using Yottaverse.MachineOps.Core.Alarms;
 
 namespace Yottaverse.MachineOps.Api.IntegrationTests;
 
@@ -89,6 +93,63 @@ public sealed class JobsApiTests
 
         Assert.Equal(HubConnectionState.Connected, connection.State);
         await connection.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task AlarmCanBeAcknowledgedIdempotently()
+    {
+        using MachineOpsApiFactory factory = new();
+        using HttpClient client = factory.CreateClient();
+        AlarmService service = factory.Services.GetRequiredService<AlarmService>();
+        MachineAlarm raised = await service.RaiseAsync(
+            $"api-test-{Guid.NewGuid():N}",
+            "E_STOP",
+            "Emergency stop input is active.",
+            null,
+            CancellationToken.None);
+        Guid idempotencyKey = Guid.NewGuid();
+        AcknowledgeAlarmRequest request = new(
+            idempotencyKey,
+            "api-test",
+            "Checked",
+            0);
+
+        using HttpResponseMessage firstResponse = await client.PostAsJsonAsync(
+            $"/api/alarms/{raised.Id}/acknowledgements",
+            request,
+            CancellationToken.None);
+        AlarmDto? first = await firstResponse.Content.ReadFromJsonAsync<AlarmDto>(
+            CancellationToken.None);
+        using HttpResponseMessage repeatedResponse = await client.PostAsJsonAsync(
+            $"/api/alarms/{raised.Id}/acknowledgements",
+            request,
+            CancellationToken.None);
+        AlarmDto? repeated = await repeatedResponse.Content.ReadFromJsonAsync<AlarmDto>(
+            CancellationToken.None);
+
+        Assert.Equal(HttpStatusCode.OK, firstResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, repeatedResponse.StatusCode);
+        Assert.NotNull(first);
+        Assert.NotNull(repeated);
+        Assert.True(first.IsAcknowledged);
+        Assert.Equal(first.Version, repeated.Version);
+    }
+
+    [Fact]
+    public async Task DiagnosticExportIsAZipArchive()
+    {
+        using MachineOpsApiFactory factory = new();
+        using HttpClient client = factory.CreateClient();
+
+        using HttpResponseMessage response = await client.GetAsync(
+            "/api/diagnostics/export",
+            CancellationToken.None);
+        byte[] content = await response.Content.ReadAsByteArrayAsync(CancellationToken.None);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("application/zip", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal((byte)'P', content[0]);
+        Assert.Equal((byte)'K', content[1]);
     }
 
     private sealed class MachineOpsApiFactory : WebApplicationFactory<Program>

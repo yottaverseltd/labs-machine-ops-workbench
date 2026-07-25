@@ -1,3 +1,4 @@
+using Yottaverse.MachineOps.Contracts.Alarms;
 using Yottaverse.MachineOps.Contracts.Jobs;
 using Yottaverse.MachineOps.Contracts.Machines;
 using Yottaverse.MachineOps.Contracts.Runs;
@@ -28,5 +29,12 @@ public interface IMachineOpsApiClient
 
     public Task<JobRunDto> SendRunCommandAsync(
         string command,
+        CancellationToken cancellationToken);
+
+    public Task<IReadOnlyList<AlarmDto>> ListAlarmsAsync(CancellationToken cancellationToken);
+
+    public Task<AlarmDto> AcknowledgeAlarmAsync(
+        Guid alarmId,
+        AcknowledgeAlarmRequest request,
         CancellationToken cancellationToken);
 }
