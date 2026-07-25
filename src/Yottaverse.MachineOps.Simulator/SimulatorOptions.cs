@@ -18,13 +18,15 @@ public enum SimulatorScenario
 public sealed record SimulatorOptions(
     int Port,
     SimulatorScenario Scenario,
-    IPAddress ListenAddress)
+    IPAddress ListenAddress,
+    string? ReplayFile = null)
 {
     public static SimulatorOptions Parse(IReadOnlyList<string> args)
     {
         int port = 5099;
         SimulatorScenario scenario = SimulatorScenario.Normal;
         IPAddress listenAddress = IPAddress.Loopback;
+        string? replayFile = null;
         for (int index = 0; index < args.Count; index++)
         {
             switch (args[index])
@@ -51,11 +53,15 @@ public sealed record SimulatorOptions(
                     }
 
                     break;
+                case "--replay" when index + 1 < args.Count:
+                    replayFile = args[++index];
+                    scenario = SimulatorScenario.Replay;
+                    break;
                 default:
                     throw new ArgumentException($"Unknown simulator option '{args[index]}'.");
             }
         }
 
-        return new SimulatorOptions(port, scenario, listenAddress);
+        return new SimulatorOptions(port, scenario, listenAddress, replayFile);
     }
 }

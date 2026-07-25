@@ -109,27 +109,15 @@ public sealed class RunCoordinator : IDisposable
         {
             JobRun run = activeRun ??
                 throw new InvalidOperationException("There is no active run.");
-
-            switch (operation)
-            {
-                case ControllerOperation.Pause:
-                    run.Pause();
-                    break;
-                case ControllerOperation.Resume:
-                    run.Resume();
-                    break;
-                case ControllerOperation.Cancel:
-                    run.Cancel(timeProvider.GetUtcNow());
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(operation));
-            }
+            ValidateTransition(run, operation);
 
             try
             {
                 await controllerSession.ExecuteAsync(operation, cancellationToken);
-                await runRepository.SaveAsync(run, cancellationToken);
-                return run;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch
             {
@@ -137,10 +125,49 @@ public sealed class RunCoordinator : IDisposable
                 await runRepository.SaveAsync(run, CancellationToken.None);
                 throw;
             }
+
+            ApplyTransition(run, operation);
+            await runRepository.SaveAsync(run, cancellationToken);
+            return run;
         }
         finally
         {
             gate.Release();
+        }
+    }
+
+    private static void ValidateTransition(JobRun run, ControllerOperation operation)
+    {
+        bool allowed = operation switch
+        {
+            ControllerOperation.Pause => run.State == JobRunState.Running,
+            ControllerOperation.Resume => run.State == JobRunState.Paused,
+            ControllerOperation.Cancel => run.State is JobRunState.Running or JobRunState.Paused,
+            _ => throw new ArgumentOutOfRangeException(nameof(operation)),
+        };
+
+        if (!allowed)
+        {
+            throw new InvalidOperationException(
+                $"A run in state '{run.State}' cannot {operation.ToString().ToLowerInvariant()}.");
+        }
+    }
+
+    private void ApplyTransition(JobRun run, ControllerOperation operation)
+    {
+        switch (operation)
+        {
+            case ControllerOperation.Pause:
+                run.Pause();
+                break;
+            case ControllerOperation.Resume:
+                run.Resume();
+                break;
+            case ControllerOperation.Cancel:
+                run.Cancel(timeProvider.GetUtcNow());
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(operation));
         }
     }
 }

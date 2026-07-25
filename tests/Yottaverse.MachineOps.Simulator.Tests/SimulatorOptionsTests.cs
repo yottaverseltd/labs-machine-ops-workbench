@@ -33,4 +33,13 @@ public sealed class SimulatorOptionsTests
 
         Assert.Contains("--surprise", exception.Message, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void ReplayOptionSelectsTheReplayScenarioAndFile()
+    {
+        SimulatorOptions options = SimulatorOptions.Parse(["--replay", "samples/run.jsonl"]);
+
+        Assert.Equal(SimulatorScenario.Replay, options.Scenario);
+        Assert.Equal("samples/run.jsonl", options.ReplayFile);
+    }
 }

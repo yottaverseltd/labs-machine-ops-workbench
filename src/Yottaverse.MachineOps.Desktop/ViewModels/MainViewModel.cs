@@ -1,7 +1,9 @@
+using System.Globalization;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Yottaverse.MachineOps.Contracts.Alarms;
+using Yottaverse.MachineOps.Contracts.History;
 using Yottaverse.MachineOps.Contracts.Jobs;
 using Yottaverse.MachineOps.Contracts.Machines;
 using Yottaverse.MachineOps.Contracts.Runs;
@@ -109,6 +111,15 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     public partial bool HasOpenAlarm { get; private set; }
 
+    [ObservableProperty]
+    public partial string HistorySearch { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial IReadOnlyList<ActivityLine> Activity { get; private set; } = [];
+
+    [ObservableProperty]
+    public partial string HistorySummary { get; private set; } = "Select Refresh to load persisted activity";
+
     [RelayCommand]
     private async Task OpenFileAsync()
     {
@@ -135,7 +146,7 @@ public partial class MainViewModel : ViewModelBase
     private bool CanSave() => currentProgram?.IsValid == true && !IsBusy;
 
     [RelayCommand(CanExecute = nameof(CanSave))]
-    private async Task SaveJobAsync()
+    private async Task SaveJobAsync(CancellationToken cancellationToken)
     {
         if (currentProgram is null)
         {
@@ -146,11 +157,11 @@ public partial class MainViewModel : ViewModelBase
         {
             IsBusy = true;
             SaveJobCommand.NotifyCanExecuteChanged();
-            ApiStatusDto apiStatus = await apiClient.GetStatusAsync(CancellationToken.None);
+            ApiStatusDto apiStatus = await apiClient.GetStatusAsync(cancellationToken);
             ApiStatus = $"{apiStatus.Service} {apiStatus.Version}";
             JobDto job = await apiClient.CreateJobAsync(
                 new CreateJobRequest(currentProgram.Name, currentProgram.Source),
-                CancellationToken.None);
+                cancellationToken);
             SavedJobReference = job.Id.ToString("N")[..8].ToUpperInvariant();
             savedJobId = job.Id;
             Status = $"Saved {job.Name} through the API.";
@@ -160,6 +171,10 @@ public partial class MainViewModel : ViewModelBase
         {
             ApiStatus = "API offline";
             Status = "The API is unavailable. Local preview remains ready.";
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            Status = "Save cancelled.";
         }
         catch (TaskCanceledException)
         {
@@ -174,18 +189,23 @@ public partial class MainViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private async Task ConnectSimulatorAsync()
+    private async Task ConnectSimulatorAsync(CancellationToken cancellationToken)
     {
         try
         {
             ControllerError = string.Empty;
             MachineStatus = "Connecting";
-            await liveClient.StartAsync(CancellationToken.None);
+            await liveClient.StartAsync(cancellationToken);
             MachineSnapshotDto snapshot = await apiClient.ConnectSimulatorAsync(
                 5099,
-                CancellationToken.None);
+                cancellationToken);
             ApplySnapshot(snapshot);
             Status = "Simulator connected through the API.";
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            MachineStatus = "Disconnected";
+            Status = "Connection cancelled.";
         }
         catch (Exception exception) when (
             exception is HttpRequestException or TaskCanceledException or InvalidDataException)
@@ -197,14 +217,14 @@ public partial class MainViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private async Task DisconnectSimulatorAsync()
+    private async Task DisconnectSimulatorAsync(CancellationToken cancellationToken)
     {
         try
         {
-            await apiClient.DisconnectSimulatorAsync(CancellationToken.None);
+            await apiClient.DisconnectSimulatorAsync(cancellationToken);
             ApplySnapshot(await apiClient.GetMachineSnapshotAsync(
                 false,
-                CancellationToken.None));
+                cancellationToken));
             Status = "Simulator disconnected.";
         }
         catch (HttpRequestException exception)
@@ -217,7 +237,7 @@ public partial class MainViewModel : ViewModelBase
     private bool CanStartRun() => savedJobId.HasValue;
 
     [RelayCommand(CanExecute = nameof(CanStartRun))]
-    private async Task StartRunAsync()
+    private async Task StartRunAsync(CancellationToken cancellationToken)
     {
         if (savedJobId is not Guid jobId)
         {
@@ -226,16 +246,20 @@ public partial class MainViewModel : ViewModelBase
 
         try
         {
-            JobRunDto run = await apiClient.StartRunAsync(jobId, CancellationToken.None);
+            JobRunDto run = await apiClient.StartRunAsync(jobId, cancellationToken);
             ApplyRun(run);
             while (run.State is "Running" or "Paused")
             {
-                await Task.Delay(250);
-                run = await apiClient.RefreshRunAsync(CancellationToken.None);
+                await Task.Delay(250, cancellationToken);
+                run = await apiClient.RefreshRunAsync(cancellationToken);
                 ApplyRun(run);
             }
 
             Status = $"Run finished with state {run.State}.";
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            Status = "Run monitoring cancelled. The simulator state is unchanged.";
         }
         catch (Exception exception) when (
             exception is HttpRequestException or TaskCanceledException or InvalidDataException)
@@ -246,19 +270,24 @@ public partial class MainViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private async Task PauseRunAsync() => await SendRunCommandAsync("pause");
+    private async Task PauseRunAsync(CancellationToken cancellationToken) =>
+        await SendRunCommandAsync("pause", cancellationToken);
 
     [RelayCommand]
-    private async Task ResumeRunAsync() => await SendRunCommandAsync("resume");
+    private async Task ResumeRunAsync(CancellationToken cancellationToken) =>
+        await SendRunCommandAsync("resume", cancellationToken);
 
     [RelayCommand]
-    private async Task CancelRunAsync() => await SendRunCommandAsync("cancel");
+    private async Task CancelRunAsync(CancellationToken cancellationToken) =>
+        await SendRunCommandAsync("cancel", cancellationToken);
 
-    private async Task SendRunCommandAsync(string command)
+    private async Task SendRunCommandAsync(
+        string command,
+        CancellationToken cancellationToken)
     {
         try
         {
-            ApplyRun(await apiClient.SendRunCommandAsync(command, CancellationToken.None));
+            ApplyRun(await apiClient.SendRunCommandAsync(command, cancellationToken));
         }
         catch (HttpRequestException exception)
         {
@@ -267,7 +296,7 @@ public partial class MainViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private async Task AcknowledgeAlarmAsync()
+    private async Task AcknowledgeAlarmAsync(CancellationToken cancellationToken)
     {
         if (currentAlarmId is not Guid alarmId)
         {
@@ -283,11 +312,38 @@ public partial class MainViewModel : ViewModelBase
                     Environment.UserName,
                     "Acknowledged from the workbench.",
                     currentAlarmVersion),
-                CancellationToken.None);
+                cancellationToken);
             ApplyAlarm(alarm.Id, alarm.Code, alarm.Message, alarm.Version, alarm.IsAcknowledged);
         }
         catch (HttpRequestException exception)
         {
+            ControllerError = exception.Message;
+        }
+    }
+
+    [RelayCommand]
+    private async Task SearchHistoryAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            OperationsHistoryDto history = await apiClient.SearchHistoryAsync(
+                HistorySearch,
+                0,
+                50,
+                cancellationToken);
+            Activity = BuildActivity(history);
+            HistorySummary =
+                $"{history.Jobs.Total} jobs, {history.Runs.Total} runs, " +
+                $"{history.Alarms.Total} alarms, {history.ProtocolMessages.Total} protocol messages";
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            HistorySummary = "History refresh cancelled";
+        }
+        catch (Exception exception) when (
+            exception is HttpRequestException or TaskCanceledException or InvalidDataException)
+        {
+            HistorySummary = "History is unavailable while the API is offline";
             ControllerError = exception.Message;
         }
     }
@@ -397,6 +453,41 @@ public partial class MainViewModel : ViewModelBase
         SaveJobCommand.NotifyCanExecuteChanged();
     }
 
+    private static ActivityLine[] BuildActivity(OperationsHistoryDto history)
+    {
+        IEnumerable<ActivityLine> jobs = history.Jobs.Items.Select(item =>
+            new ActivityLine(
+                item.CreatedAtUtc,
+                "JOB",
+                item.Name,
+                item.State));
+        IEnumerable<ActivityLine> runs = history.Runs.Items.Select(item =>
+            new ActivityLine(
+                item.StartedAtUtc ?? DateTimeOffset.MinValue,
+                "RUN",
+                item.JobName,
+                item.FailureReason is null ? item.State : $"{item.State}: {item.FailureReason}"));
+        IEnumerable<ActivityLine> alarms = history.Alarms.Items.Select(item =>
+            new ActivityLine(
+                item.RaisedAtUtc,
+                "ALARM",
+                $"{item.Code} / {item.Severity}",
+                item.IsAcknowledged ? $"{item.Message} (acknowledged)" : item.Message));
+        IEnumerable<ActivityLine> protocol = history.ProtocolMessages.Items.Select(item =>
+            new ActivityLine(
+                item.ObservedAtUtc,
+                item.Direction.ToUpperInvariant(),
+                $"#{item.Sequence} {item.MessageType}",
+                item.Payload));
+
+        return jobs
+            .Concat(runs)
+            .Concat(alarms)
+            .Concat(protocol)
+            .OrderByDescending(line => line.ObservedAtUtc)
+            .ToArray();
+    }
+
     private sealed class DesignFilePicker : IGCodeFilePicker
     {
         public Task<PickedGCodeFile?> PickAsync() => Task.FromResult<PickedGCodeFile?>(null);
@@ -405,7 +496,7 @@ public partial class MainViewModel : ViewModelBase
     private sealed class DesignApiClient : IMachineOpsApiClient
     {
         public Task<ApiStatusDto> GetStatusAsync(CancellationToken cancellationToken) =>
-            Task.FromResult(new ApiStatusDto("MachineOps API", "0.2.0", DateTimeOffset.UtcNow));
+            Task.FromResult(new ApiStatusDto("MachineOps API", "1.0.0", DateTimeOffset.UtcNow));
 
         public Task<JobDto> CreateJobAsync(
             CreateJobRequest request,
@@ -460,6 +551,18 @@ public partial class MainViewModel : ViewModelBase
             AcknowledgeAlarmRequest request,
             CancellationToken cancellationToken) =>
             throw new NotSupportedException();
+
+        public Task<OperationsHistoryDto> SearchHistoryAsync(
+            string? query,
+            int skip,
+            int take,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(
+                new OperationsHistoryDto(
+                    new PageDto<JobHistoryDto>([], skip, take, 0),
+                    new PageDto<RunHistoryDto>([], skip, take, 0),
+                    new PageDto<AlarmHistoryDto>([], skip, take, 0),
+                    new PageDto<ProtocolMessageDto>([], skip, take, 0)));
     }
 
     private sealed class DesignLiveClient : IMachineLiveClient
@@ -514,6 +617,17 @@ public partial class MainViewModel : ViewModelBase
             return ValueTask.CompletedTask;
         }
     }
+}
+
+public sealed record ActivityLine(
+    DateTimeOffset ObservedAtUtc,
+    string Kind,
+    string Summary,
+    string Detail)
+{
+    public string Time => ObservedAtUtc == DateTimeOffset.MinValue
+        ? "pending"
+        : ObservedAtUtc.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
 }
 
 internal static class DemoPrograms

@@ -21,14 +21,20 @@
   </Design.DataContext>
 
   <Grid RowDefinitions="64,*,34">
-    <Border Grid.Row="0" Background="#0E1720" BorderBrush="#253445" BorderThickness="0,0,0,1">
+    <Border Grid.Row="0"
+            Background="{DynamicResource WorkbenchChromeBrush}"
+            BorderBrush="{DynamicResource WorkbenchBorderBrush}"
+            BorderThickness="0,0,0,1">
       <Grid Margin="22,0" ColumnDefinitions="Auto,*,Auto">
         <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-          <Border Width="34" Height="34" CornerRadius="7" Background="#2B80FF">
+          <Border Width="34"
+                  Height="34"
+                  CornerRadius="7"
+                  Background="{DynamicResource WorkbenchAccentBrush}">
             <Path Width="19"
                   Height="19"
                   Stretch="Uniform"
-                  Fill="White"
+                  Fill="{DynamicResource WorkbenchAccentTextBrush}"
                   Data="M2,3 L9,3 L9,6 L12,6 L12,3 L19,3 L19,10 L16,10 L16,13 L19,13 L19,20 L12,20 L12,17 L9,17 L9,20 L2,20 L2,13 L5,13 L5,10 L2,10 Z" />
           </Border>
           <StackPanel Spacing="1">
@@ -42,7 +48,7 @@
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
                     Spacing="7">
-          <Ellipse Width="8" Height="8" Fill="#41D6A3" />
+          <Ellipse Width="8" Height="8" Fill="{DynamicResource WorkbenchSuccessBrush}" />
           <TextBlock Text="{Binding ApiStatus}" Classes="muted" FontSize="12" />
           <TextBlock Text="/" Classes="muted" FontSize="12" />
           <TextBlock Text="{Binding LiveStatus}" Classes="muted" FontSize="12" />
@@ -76,7 +82,7 @@
                 <TextBlock Text="{Binding SegmentCount}" FontSize="19" FontWeight="SemiBold" />
               </StackPanel>
               <PathIcon Width="18"
-                        Foreground="#41D6A3"
+                        Foreground="{DynamicResource WorkbenchSuccessBrush}"
                         Data="M3,16 L8,11 L11,14 L18,7 M13,7 L18,7 L18,12" />
             </Grid>
           </Border>
@@ -100,7 +106,10 @@
                   <TextBlock Text="Findings" Classes="muted" FontSize="11" />
                   <TextBlock Text="{Binding WarningCount}" FontSize="15" FontWeight="SemiBold" />
                 </StackPanel>
-                <Ellipse Width="9" Height="9" Fill="#F6B84A" VerticalAlignment="Center" />
+                <Ellipse Width="9"
+                         Height="9"
+                         Fill="{DynamicResource WorkbenchWarningBrush}"
+                         VerticalAlignment="Center" />
               </Grid>
             </Border>
           </StackPanel>
@@ -117,7 +126,7 @@
                 <TextBlock Text="{Binding RunState}" Classes="muted" FontSize="10" />
                 <TextBlock Grid.Column="1"
                            Text="{Binding RunProgress, StringFormat='{}{0:0}%'}"
-                           Foreground="#41D6A3"
+                           Foreground="{DynamicResource WorkbenchSuccessBrush}"
                            FontSize="10" />
               </Grid>
               <ProgressBar Minimum="0"
@@ -126,18 +135,18 @@
                            Height="4"
                            ShowProgressText="False" />
               <TextBlock Text="{Binding ControllerError}"
-                         Foreground="#F17D85"
+                         Foreground="{DynamicResource WorkbenchErrorBrush}"
                          FontSize="10"
                          TextWrapping="Wrap" />
-              <Border Background="#331E24"
-                      BorderBrush="#71333D"
+              <Border Background="{DynamicResource WorkbenchAlarmBrush}"
+                      BorderBrush="{DynamicResource WorkbenchAlarmBorderBrush}"
                       BorderThickness="1"
                       CornerRadius="4"
                       Padding="8"
                       IsVisible="{Binding HasOpenAlarm}">
                 <StackPanel Spacing="6">
                   <TextBlock Text="{Binding AlarmStatus}"
-                             Foreground="#F39AA2"
+                             Foreground="{DynamicResource WorkbenchAlarmTextBrush}"
                              FontSize="10"
                              TextWrapping="Wrap" />
                   <Button Classes="secondary"
@@ -184,21 +193,34 @@
       <Grid Grid.Column="1" RowDefinitions="*,190" RowSpacing="16">
         <Border Classes="card" Padding="0">
           <Grid RowDefinitions="50,*">
-            <Border BorderBrush="#253445" BorderThickness="0,0,0,1" Padding="17,0">
+            <Border BorderBrush="{DynamicResource WorkbenchBorderBrush}"
+                    BorderThickness="0,0,0,1"
+                    Padding="17,0">
               <Grid ColumnDefinitions="*,Auto">
                 <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                   <TextBlock Text="XY TOOLPATH" Classes="heading" />
-                  <Border Background="#17382F" CornerRadius="10" Padding="8,3">
-                    <TextBlock Text="PREVIEW" Foreground="#56E1B2" FontSize="9" FontWeight="Bold" />
+                  <Border Background="{DynamicResource WorkbenchPreviewBrush}"
+                          CornerRadius="10"
+                          Padding="8,3">
+                    <TextBlock Text="PREVIEW"
+                               Foreground="{DynamicResource WorkbenchSuccessBrightBrush}"
+                               FontSize="9"
+                               FontWeight="Bold" />
                   </Border>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
                   <StackPanel Orientation="Horizontal" Spacing="6">
-                    <Rectangle Width="18" Height="2" Fill="#41D6A3" VerticalAlignment="Center" />
+                    <Rectangle Width="18"
+                               Height="2"
+                               Fill="{DynamicResource WorkbenchSuccessBrush}"
+                               VerticalAlignment="Center" />
                     <TextBlock Text="Cut" Classes="muted" FontSize="11" />
                   </StackPanel>
                   <StackPanel Orientation="Horizontal" Spacing="6">
-                    <Rectangle Width="18" Height="1" Fill="#60758D" VerticalAlignment="Center" />
+                    <Rectangle Width="18"
+                               Height="1"
+                               Fill="{DynamicResource WorkbenchRapidBrush}"
+                               VerticalAlignment="Center" />
                     <TextBlock Text="Rapid" Classes="muted" FontSize="11" />
                   </StackPanel>
                 </StackPanel>
@@ -210,7 +232,9 @@
 
         <Border Grid.Row="1" Classes="card" Padding="0">
           <Grid RowDefinitions="45,*">
-            <Border BorderBrush="#253445" BorderThickness="0,0,0,1" Padding="16,0">
+            <Border BorderBrush="{DynamicResource WorkbenchBorderBrush}"
+                    BorderThickness="0,0,0,1"
+                    Padding="16,0">
               <TextBlock Text="VALIDATION" Classes="heading" FontSize="14" VerticalAlignment="Center" />
             </Border>
             <ListBox Grid.Row="1"
@@ -222,15 +246,18 @@
                 <DataTemplate x:DataType="gcode:GCodeDiagnostic">
                   <Grid Margin="5,4" ColumnDefinitions="58,82,*">
                     <TextBlock Text="{Binding LineNumber, StringFormat='Line {0}'}"
-                               Foreground="#718399"
+                               Foreground="{DynamicResource WorkbenchDimBrush}"
                                FontFamily="Cascadia Mono, Consolas, monospace"
                                FontSize="11" />
                     <TextBlock Grid.Column="1"
                                Text="{Binding Code}"
-                               Foreground="#F6B84A"
+                               Foreground="{DynamicResource WorkbenchWarningBrush}"
                                FontFamily="Cascadia Mono, Consolas, monospace"
                                FontSize="11" />
-                    <TextBlock Grid.Column="2" Text="{Binding Message}" Foreground="#BCC9D5" FontSize="11" />
+                    <TextBlock Grid.Column="2"
+                               Text="{Binding Message}"
+                               Foreground="{DynamicResource WorkbenchTextBrush}"
+                               FontSize="11" />
                   </Grid>
                 </DataTemplate>
               </ListBox.ItemTemplate>
@@ -240,34 +267,81 @@
       </Grid>
 
       <Border Grid.Column="2" Classes="card" Padding="0">
-        <Grid RowDefinitions="50,*">
-          <Border BorderBrush="#253445" BorderThickness="0,0,0,1" Padding="17,0">
-            <Grid ColumnDefinitions="*,Auto">
-              <TextBlock Text="SOURCE" Classes="heading" VerticalAlignment="Center" />
-              <TextBlock Grid.Column="1"
-                         Text="READ ONLY"
-                         Classes="eyebrow"
-                         FontSize="9"
-                         VerticalAlignment="Center" />
+        <TabControl Background="Transparent">
+          <TabItem Header="SOURCE">
+            <TextBox Classes="editor"
+                     Margin="12"
+                     Text="{Binding Source}"
+                     IsReadOnly="True"
+                     AcceptsReturn="True"
+                     TextWrapping="NoWrap"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     ScrollViewer.HorizontalScrollBarVisibility="Auto" />
+          </TabItem>
+          <TabItem Header="ACTIVITY">
+            <Grid Margin="12" RowDefinitions="Auto,Auto,*" RowSpacing="9">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="7">
+                <TextBox PlaceholderText="Search jobs, runs, alarms and protocol"
+                         Text="{Binding HistorySearch}" />
+                <Button Grid.Column="1"
+                        Classes="primary"
+                        Command="{Binding SearchHistoryCommand}"
+                        Content="Refresh" />
+              </Grid>
+              <TextBlock Grid.Row="1"
+                         Text="{Binding HistorySummary}"
+                         Classes="muted"
+                         FontSize="10"
+                         TextWrapping="Wrap" />
+              <ListBox Grid.Row="2"
+                       Background="Transparent"
+                       BorderThickness="0"
+                       ItemsSource="{Binding Activity}">
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ActivityLine">
+                    <Border BorderBrush="{DynamicResource WorkbenchBorderBrush}"
+                            BorderThickness="0,0,0,1"
+                            Padding="4,8">
+                      <Grid ColumnDefinitions="48,54,*" ColumnSpacing="7">
+                        <TextBlock Text="{Binding Time}"
+                                   Foreground="{DynamicResource WorkbenchDimBrush}"
+                                   FontFamily="Cascadia Mono, Consolas, monospace"
+                                   FontSize="9" />
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding Kind}"
+                                   Foreground="{DynamicResource WorkbenchSuccessBrightBrush}"
+                                   FontSize="9"
+                                   FontWeight="Bold" />
+                        <StackPanel Grid.Column="2" Spacing="3">
+                          <TextBlock Text="{Binding Summary}"
+                                     FontSize="11"
+                                     FontWeight="SemiBold"
+                                     TextTrimming="CharacterEllipsis" />
+                          <TextBlock Text="{Binding Detail}"
+                                     Classes="muted"
+                                     FontFamily="Cascadia Mono, Consolas, monospace"
+                                     FontSize="9"
+                                     TextWrapping="Wrap"
+                                     MaxHeight="46" />
+                        </StackPanel>
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
             </Grid>
-          </Border>
-          <TextBox Grid.Row="1"
-                   Classes="editor"
-                   Margin="12"
-                   Text="{Binding Source}"
-                   IsReadOnly="True"
-                   AcceptsReturn="True"
-                   TextWrapping="NoWrap"
-                   ScrollViewer.VerticalScrollBarVisibility="Auto"
-                   ScrollViewer.HorizontalScrollBarVisibility="Auto" />
-        </Grid>
+          </TabItem>
+        </TabControl>
       </Border>
     </Grid>
 
-    <Border Grid.Row="2" Background="#0E1720" BorderBrush="#253445" BorderThickness="0,1,0,0">
+    <Border Grid.Row="2"
+            Background="{DynamicResource WorkbenchChromeBrush}"
+            BorderBrush="{DynamicResource WorkbenchBorderBrush}"
+            BorderThickness="0,1,0,0">
       <Grid Margin="22,0" ColumnDefinitions="*,Auto">
         <TextBlock Text="{Binding Status}"
-                   Foreground="#91A2B5"
+                   Foreground="{DynamicResource WorkbenchMutedBrush}"
                    FontSize="11"
                    VerticalAlignment="Center" />
         <TextBlock Grid.Column="1"

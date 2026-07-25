@@ -13,6 +13,7 @@
     <Project Path="tests/Yottaverse.MachineOps.Application.Tests/Yottaverse.MachineOps.Application.Tests.csproj" />
     <Project Path="tests/Yottaverse.MachineOps.Architecture.Tests/Yottaverse.MachineOps.Architecture.Tests.csproj" />
     <Project Path="tests/Yottaverse.MachineOps.Core.Tests/Yottaverse.MachineOps.Core.Tests.csproj" />
+    <Project Path="tests/Yottaverse.MachineOps.Desktop.Tests/Yottaverse.MachineOps.Desktop.Tests.csproj" />
     <Project Path="tests/Yottaverse.MachineOps.Infrastructure.IntegrationTests/Yottaverse.MachineOps.Infrastructure.IntegrationTests.csproj" />
     <Project Path="tests/Yottaverse.MachineOps.Simulator.Tests/Yottaverse.MachineOps.Simulator.Tests.csproj" />
   </Folder>

@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using Yottaverse.MachineOps.Contracts.Alarms;
+using Yottaverse.MachineOps.Contracts.History;
 using Yottaverse.MachineOps.Contracts.Jobs;
 using Yottaverse.MachineOps.Contracts.Machines;
 using Yottaverse.MachineOps.Contracts.Runs;
@@ -117,6 +118,20 @@ public sealed class MachineOpsApiClient : IMachineOpsApiClient
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<AlarmDto>(cancellationToken) ??
             throw new InvalidDataException("The API returned an empty alarm response.");
+    }
+
+    public async Task<OperationsHistoryDto> SearchHistoryAsync(
+        string? query,
+        int skip,
+        int take,
+        CancellationToken cancellationToken)
+    {
+        string path =
+            $"api/history?query={Uri.EscapeDataString(query ?? string.Empty)}&skip={skip}&take={take}";
+        return await httpClient.GetFromJsonAsync<OperationsHistoryDto>(
+            path,
+            cancellationToken) ??
+            throw new InvalidDataException("The API returned an empty history response.");
     }
 
     private static async Task<MachineSnapshotDto> ReadMachineSnapshotAsync(

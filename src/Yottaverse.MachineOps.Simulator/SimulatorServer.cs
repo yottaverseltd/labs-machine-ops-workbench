@@ -8,9 +8,13 @@ namespace Yottaverse.MachineOps.Simulator;
 
 public sealed class SimulatorServer : IAsyncDisposable
 {
+    private static readonly System.Text.Json.JsonSerializerOptions ReplayJsonOptions =
+        new(System.Text.Json.JsonSerializerDefaults.Web);
+
     private readonly CancellationTokenSource shutdown = new();
     private readonly ConcurrentDictionary<int, Task> sessions = new();
     private readonly SimulatorOptions options;
+    private ControllerStateWire[] replayStates = [];
     private TcpListener? listener;
     private Task? acceptLoop;
     private int sessionNumber;
@@ -29,6 +33,7 @@ public sealed class SimulatorServer : IAsyncDisposable
             throw new InvalidOperationException("The simulator is already running.");
         }
 
+        replayStates = LoadReplayStates();
         listener = new TcpListener(options.ListenAddress, options.Port);
         listener.Start();
         BoundPort = ((IPEndPoint)listener.LocalEndpoint).Port;
@@ -104,6 +109,7 @@ public sealed class SimulatorServer : IAsyncDisposable
                 NewLine = "\n",
             };
             long sequence = 0;
+            int replayIndex = 0;
             ControllerStateWire state = new("Idle", 0, 0, 0, null, null, 0, 0);
 
             while (!cancellationToken.IsCancellationRequested)
@@ -179,7 +185,12 @@ public sealed class SimulatorServer : IAsyncDisposable
                             break;
                         }
 
-                        if (state.OperatingState == "Running")
+                        if (options.Scenario == SimulatorScenario.Replay)
+                        {
+                            state = replayStates[Math.Min(replayIndex, replayStates.Length - 1)];
+                            replayIndex++;
+                        }
+                        else if (state.OperatingState == "Running")
                         {
                             double progress = Math.Min(100, state.Progress + 10);
                             state = state with
@@ -339,6 +350,38 @@ public sealed class SimulatorServer : IAsyncDisposable
                 command.CorrelationId,
                 sequence,
                 state));
+
+    private ControllerStateWire[] LoadReplayStates()
+    {
+        if (options.Scenario != SimulatorScenario.Replay)
+        {
+            return [];
+        }
+
+        if (string.IsNullOrWhiteSpace(options.ReplayFile))
+        {
+            throw new InvalidOperationException(
+                "The replay scenario requires a JSON Lines file supplied with --replay.");
+        }
+
+        string path = Path.GetFullPath(options.ReplayFile);
+        if (!File.Exists(path))
+        {
+            throw new FileNotFoundException("The simulator replay file was not found.", path);
+        }
+
+        ControllerStateWire[] states = File.ReadLines(path)
+            .Where(line => !string.IsNullOrWhiteSpace(line))
+            .Select(
+                line => System.Text.Json.JsonSerializer.Deserialize<ControllerStateWire>(
+                    line,
+                    ReplayJsonOptions) ??
+                    throw new InvalidDataException("A replay line contained an empty state."))
+            .ToArray();
+        return states.Length == 0
+            ? throw new InvalidDataException("The simulator replay file has no states.")
+            : states;
+    }
 
     private static Task SendProtocolErrorAsync(
         StreamWriter writer,

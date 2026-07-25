@@ -113,6 +113,47 @@ public sealed class TcpControllerSessionTests
         Assert.Contains("Emergency stop", alarm.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task ReplayScenarioReturnsTheRecordedStatesInOrder()
+    {
+        string replayPath = Path.Combine(
+            Path.GetTempPath(),
+            $"machineops-replay-{Guid.NewGuid():N}.jsonl");
+        try
+        {
+            await File.WriteAllLinesAsync(
+                replayPath,
+                [
+                    """{"operatingState":"Running","x":12,"y":4,"z":-1,"feedRate":250,"spindleSpeed":8000,"progress":25,"lastAcknowledgedCommand":2}""",
+                    """{"operatingState":"Idle","x":48,"y":16,"z":5,"feedRate":0,"spindleSpeed":0,"progress":100,"lastAcknowledgedCommand":8}""",
+                ]);
+            await using SimulatorServer server = new(
+                new SimulatorOptions(
+                    0,
+                    SimulatorScenario.Replay,
+                    IPAddress.Loopback,
+                    replayPath));
+            await server.StartAsync();
+            await using TcpControllerSession session = CreateSession();
+            await session.ConnectAsync(
+                ConnectionOptions(Guid.NewGuid(), server.BoundPort),
+                CancellationToken.None);
+            await session.ExecuteAsync(ControllerOperation.Start, CancellationToken.None);
+
+            MachineSnapshot first = await session.RefreshAsync(CancellationToken.None);
+            MachineSnapshot second = await session.RefreshAsync(CancellationToken.None);
+
+            Assert.Equal(25, first.Progress);
+            Assert.Equal(12, first.Position.X);
+            Assert.Equal(100, second.Progress);
+            Assert.Equal(OperatingStatus.Idle, second.OperatingStatus);
+        }
+        finally
+        {
+            File.Delete(replayPath);
+        }
+    }
+
     private static ControllerConnectionOptions ConnectionOptions(Guid machineId, int port) =>
         new(machineId, "127.0.0.1", port, TimeSpan.FromSeconds(2));
 

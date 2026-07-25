@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Yottaverse.MachineOps.Application.Alarms;
 using Yottaverse.MachineOps.Contracts.Alarms;
+using Yottaverse.MachineOps.Contracts.History;
 using Yottaverse.MachineOps.Contracts.Jobs;
 using Yottaverse.MachineOps.Core.Alarms;
 
@@ -150,6 +151,25 @@ public sealed class JobsApiTests
         Assert.Equal("application/zip", response.Content.Headers.ContentType?.MediaType);
         Assert.Equal((byte)'P', content[0]);
         Assert.Equal((byte)'K', content[1]);
+    }
+
+    [Fact]
+    public async Task HistoryContractIsPagedAndValidatesThePageSize()
+    {
+        using MachineOpsApiFactory factory = new();
+        using HttpClient client = factory.CreateClient();
+
+        OperationsHistoryDto? history =
+            await client.GetFromJsonAsync<OperationsHistoryDto>(
+                "/api/history?query=fixture&skip=0&take=25",
+                CancellationToken.None);
+        using HttpResponseMessage invalid = await client.GetAsync(
+            "/api/history?take=101",
+            CancellationToken.None);
+
+        Assert.NotNull(history);
+        Assert.Equal(25, history.Jobs.Take);
+        Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
     }
 
     private sealed class MachineOpsApiFactory : WebApplicationFactory<Program>

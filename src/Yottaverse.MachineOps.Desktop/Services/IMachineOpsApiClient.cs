@@ -1,4 +1,5 @@
 using Yottaverse.MachineOps.Contracts.Alarms;
+using Yottaverse.MachineOps.Contracts.History;
 using Yottaverse.MachineOps.Contracts.Jobs;
 using Yottaverse.MachineOps.Contracts.Machines;
 using Yottaverse.MachineOps.Contracts.Runs;
@@ -36,5 +37,11 @@ public interface IMachineOpsApiClient
     public Task<AlarmDto> AcknowledgeAlarmAsync(
         Guid alarmId,
         AcknowledgeAlarmRequest request,
+        CancellationToken cancellationToken);
+
+    public Task<OperationsHistoryDto> SearchHistoryAsync(
+        string? query,
+        int skip,
+        int take,
         CancellationToken cancellationToken);
 }

@@ -64,6 +64,7 @@ if (useVolatileStorage)
     builder.Services.AddSingleton<IAlarmRepository, InMemoryAlarmRepository>();
     builder.Services.AddSingleton<IOutboxStore, InMemoryOutboxStore>();
     builder.Services.AddSingleton<IDiagnosticExporter, InMemoryDiagnosticExporter>();
+    builder.Services.AddSingleton<IOperationsHistoryQuery, InMemoryOperationsHistoryQuery>();
 }
 else
 {
@@ -77,6 +78,7 @@ else
     builder.Services.AddSingleton<IAlarmRepository, DapperAlarmRepository>();
     builder.Services.AddSingleton<IOutboxStore, DapperOutboxStore>();
     builder.Services.AddSingleton<IDiagnosticExporter, ZipDiagnosticExporter>();
+    builder.Services.AddSingleton<IOperationsHistoryQuery, DapperOperationsHistoryQuery>();
 }
 
 builder.Services.AddScoped<CreateJobHandler>();
@@ -120,7 +122,7 @@ app.MapOpenApi();
 app.MapGet(
         "/health",
         (TimeProvider timeProvider) => TypedResults.Ok(
-            new ApiStatusDto("MachineOps API", "0.7.0", timeProvider.GetUtcNow())))
+            new ApiStatusDto("MachineOps API", "1.0.0", timeProvider.GetUtcNow())))
     .WithName("GetApiStatus")
     .WithTags("Operations");
 if (!useVolatileStorage)
