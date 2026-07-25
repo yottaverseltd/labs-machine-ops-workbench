@@ -35,3 +35,8 @@ Package versions are centrally pinned. CI starts from a tagged commit, reruns
 the tests, builds both platforms, generates an SPDX SBOM and calculates
 checksums before creating a release. A tag is therefore a source input, not an
 unverified label attached to local output.
+
+The release jobs also install the packages they just built. Windows launches
+the installed application for ten seconds before running its uninstaller. The
+Linux job installs the Debian package into Ubuntu 24.04, starts Avalonia under
+Xvfb, removes the package, and checks that its application directory is gone.

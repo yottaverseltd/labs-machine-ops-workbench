@@ -1,98 +1,207 @@
 # MachineOps Workbench
 
-MachineOps Workbench is a cross-platform desktop workbench for inspecting and
-running CNC jobs against a deterministic simulator. It is built as a practical
-reference for layered .NET desktop systems where the UI, application rules,
-transport, and persistence stay independently testable.
+MachineOps Workbench is a cross-platform job execution and diagnostics console
+for simulated GRBL-class controllers. It explores how the workflow class
+represented by traditional Java desktop G-code senders can be structured using
+modern .NET boundaries, persistent history, remote APIs, and reproducible
+testing.
 
-The workbench opens a G-code file, validates supported commands, and renders an
-XY toolpath without requiring a controller. When the API is running, the same
-program can be saved through a versioned HTTP contract.
+It solves a practical development problem: inspecting a program, exercising a
+controller workflow, observing live behaviour, and retaining enough evidence
+to diagnose a failure normally require hardware and several disconnected
+tools. MachineOps supplies that loop as one deterministic local product.
 
-## Current capability
+> Safety: v1.0 supports only the supplied TCP simulator. It must not be used to
+> control physical machinery. General GRBL and serial-port support are future,
+> experimental concerns outside this release.
 
-- Open `.nc`, `.ngc`, `.gcode`, and `.tap` files
-- Parse absolute and relative G0 and G1 moves
-- Convert inch programs to millimetres
-- Report unsupported arc motion and invalid feed rates
-- Preview rapid and cutting moves on a responsive XY surface
-- Save validated jobs through an ASP.NET Core API
-- Persist jobs in PostgreSQL through parameterised Dapper queries
-- Apply ordered, transactional SQL migrations on API startup
-- Connect to the deterministic TCP simulator
-- Start, pause, resume, and cancel a simulated run
-- Receive reduced live snapshots through SignalR
-- Reconnect the live channel and resynchronise from the API snapshot
-- Persist run state and the complete command and response transcript
-- Raise and acknowledge alarms with idempotency and version checks
-- Publish alarm notifications through a transactional outbox
-- Export a ZIP diagnostic bundle from the API
-- Exercise malformed, slow, duplicate, out-of-order, alarm, disconnect, and burst scenarios
-- Inspect the generated OpenAPI document at `/openapi/v1.json`
-- Run entirely offline on Windows, Linux, and macOS
+![MachineOps Workbench showing the sample pocket and live simulator state](docs/images/workbench-overview.jpg)
 
-## Run it
+## What works
 
-Install the .NET 10 SDK and Docker Desktop. Start PostgreSQL:
+- Import `.nc`, `.ngc`, `.gcode`, and `.tap` files.
+- Parse absolute and relative G0/G1 motion in millimetres or inches.
+- Report invalid and unsupported input with source line numbers.
+- Preview rapid and cutting XY motion.
+- Save jobs through a controller-based ASP.NET Core API.
+- Persist jobs, runs, alarms, sessions, and protocol traffic in PostgreSQL with
+  explicit Dapper SQL.
+- Connect the backend to a deterministic JSON Lines TCP simulator.
+- Start, pause, resume, cancel, and monitor simulated runs.
+- Display position, feed, spindle, progress, connection state, and alarms.
+- Receive reduced live state through SignalR and recover from an HTTP snapshot.
+- Acknowledge alarms with idempotency and optimistic concurrency.
+- Search paged job, run, alarm, and protocol history.
+- Replay recorded simulator states and export ZIP diagnostic evidence.
+- Install self-contained desktop packages on Windows x64 and Debian/Ubuntu x64.
 
-```shell
-docker compose up -d postgres
-```
+![Persisted jobs, runs, alarms, and protocol messages in the Activity view](docs/images/workbench-activity.jpg)
 
-Start the API:
+Unsupported: physical controllers, complete GRBL syntax, 3D toolpath rendering,
+authentication, internet-facing deployment, code-signed installers, ARM
+packages, and macOS release packages.
 
-```shell
-dotnet restore
-dotnet run --project src/Yottaverse.MachineOps.Api
-```
+## Five-minute quick start
 
-Start the simulator in another terminal:
+You need the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
+and Docker with Compose.
 
 ```shell
-dotnet run --project src/Yottaverse.MachineOps.Simulator
-```
-
-Then start the desktop app:
-
-```shell
+git clone https://github.com/yottaverseltd/labs-machine-ops-workbench.git
+cd labs-machine-ops-workbench
+docker compose up -d --build --wait
 dotnet run --project src/Yottaverse.MachineOps.Desktop
 ```
 
-The app opens with `samples/gcode/simple-pocket.ngc` already loaded. Choose
-**Save job** to send it to the API. Local import and preview still work while
-the API is stopped. Use **Connect**, then **Start saved job** to execute the
-sample. The run advances in fixed ten percent steps so a test failure can be
-reproduced exactly.
+The sample pocket opens automatically. Select **Save job**, **Connect**, then
+**Start saved job**. Open the **Activity** tab and select **Refresh** to inspect
+the persisted run and controller transcript.
 
-## Verify it
+The backend readiness endpoint is
+`http://localhost:5080/health/ready`; generated OpenAPI is available at
+`http://localhost:5080/openapi/v1.json`.
 
-```shell
-dotnet test
+## Architecture
+
+```mermaid
+flowchart LR
+    Desktop["Avalonia desktop"]
+    API["HTTP API and SignalR"]
+    Application["Application use cases"]
+    Core["Core rules"]
+    Infrastructure["Dapper and TCP adapters"]
+    PostgreSQL[("PostgreSQL")]
+    Simulator["Deterministic simulator"]
+
+    Desktop -->|"versioned DTOs"| API
+    API --> Application
+    Application --> Core
+    API --> Infrastructure
+    Infrastructure --> Application
+    Infrastructure --> PostgreSQL
+    Infrastructure <--> Simulator
 ```
 
-## Release path
+Core knows nothing about Avalonia, ASP.NET Core, Dapper, Npgsql, or the
+simulator. Application coordinates Core through explicit ports. Infrastructure
+implements persistence and controller transport. Controllers choose HTTP
+responses without owning domain rules. Desktop reaches the product only through
+typed HTTP and SignalR services.
 
-| Version | Working capability |
+Read [the solution tour](docs/learning-path/01-solution-tour.md), then follow
+the numbered learning path. The
+[critical flow diagrams](docs/diagrams/critical-flows.md) trace execution,
+alarm acknowledgement, and reconnect recovery.
+
+## Demonstration walkthrough
+
+1. Start the Compose stack.
+2. Launch the desktop from source or an installed package.
+3. Inspect the preloaded sample and its validation results.
+4. Save it through the API.
+5. Connect to the simulator and start the saved job.
+6. Watch live position, feed, spindle, and progress.
+7. Pause and resume, or let the deterministic run complete.
+8. Refresh Activity and search the durable protocol transcript.
+9. Stop and restart the API to observe reconnect and snapshot recovery.
+10. Download `/api/diagnostics/export` for a portable evidence bundle.
+
+`scripts/demo.ps1` runs the service-side acceptance path without a GUI. See the
+[full demonstration guide](docs/deployment/demonstration.md).
+
+## Repository map
+
+```text
+src/
+  Yottaverse.MachineOps.Desktop/        Avalonia views, view models, clients
+  Yottaverse.MachineOps.Api/            controllers, hosted workers, SignalR
+  Yottaverse.MachineOps.Contracts/      external requests, DTOs, events
+  Yottaverse.MachineOps.Application/    use cases and ports
+  Yottaverse.MachineOps.Core/           parser, state machines, invariants
+  Yottaverse.MachineOps.Infrastructure/ Dapper, PostgreSQL, TCP, diagnostics
+  Yottaverse.MachineOps.Simulator/      deterministic controller process
+tests/                                  unit, boundary, architecture, real DB
+docs/                                   learning path, ADRs, diagrams, evidence
+samples/                                G-code and replay files
+deploy/                                 containers and native packaging
+```
+
+## Build and test
+
+```shell
+dotnet restore Yottaverse.MachineOps.slnx
+dotnet format Yottaverse.MachineOps.slnx --verify-no-changes --no-restore
+dotnet build Yottaverse.MachineOps.slnx --configuration Release --no-restore
+dotnet test Yottaverse.MachineOps.slnx --configuration Release --no-build
+```
+
+The Infrastructure suite starts real PostgreSQL containers. Docker must be
+running. Coverage uses Coverlet and is uploaded by CI. Architecture tests
+enforce project boundaries and keep persistence packages out of controllers.
+
+## Install and package
+
+Release assets include:
+
+- Windows x64 per-user installer
+- Windows x64 portable ZIP
+- Debian/Ubuntu x64 `.deb`
+- Linux x64 portable tarball
+- SHA-256 checksum manifest
+- SPDX JSON SBOM
+- API container image
+
+See [installation](docs/deployment/installation.md),
+[packaging internals](docs/learning-path/10-windows-linux-packaging.md), and
+[upgrade and rollback](docs/deployment/upgrade-and-rollback.md). Executables
+are unsigned development builds.
+
+## Release history
+
+| Version | Coherent product capability |
 | --- | --- |
-| 0.1 | Local G-code import, validation, and XY preview |
-| 0.2 | HTTP API and contract boundary |
-| 0.3 | PostgreSQL persistence through Dapper |
-| 0.4 | TCP simulator and session control |
-| 0.5 | Start, pause, resume, and cancel |
-| 0.6 | SignalR live updates and snapshot recovery |
-| 0.7 | Alarms and operator acknowledgement |
-| 0.8 | History, diagnostics, and replay |
-| 0.9 | Automated quality, security, and packaging |
-| 1.0 | Cross-platform release |
+| v0.1 | Offline import, validation, and XY preview |
+| v0.2 | HTTP contracts, typed client, OpenAPI, and Problem Details |
+| v0.3 | PostgreSQL schema, Dapper persistence, and job catalogue |
+| v0.4 | TCP simulator, execution state machine, and protocol audit |
+| v0.5 | SignalR live state, bounded cadence, reconnect, and resync |
+| v0.6 | Durable alarms, outbox, health, logging, and diagnostics |
+| v0.7 | Windows, Linux, container, SBOM, and release engineering |
+| v1.0 | Searchable operations history, replay, hardening, and training material |
 
-## Project principles
+Every tag was created after its functional acceptance checks. Changes are
+detailed in [CHANGELOG.md](CHANGELOG.md).
 
-- Core rules do not depend on UI, transport, or storage.
-- Desktop code communicates through defined service boundaries.
-- Live events are notifications, not authoritative state.
-- Simulator faults are deterministic and reproducible.
-- Every version remains runnable and tested.
+## Modernisation study
 
-## Licence
+Universal G-Code Sender is credited as prior art for the general desktop
+workflow of loading, inspecting, sending, and monitoring G-code. MachineOps is
+an independent clean-room modernisation study, not a port. No source code,
+tests, assets, screenshots, documentation, or distinctive interface from
+Universal G-Code Sender were copied.
 
-MIT
+The study concentrates on boundaries that older single-process desktop
+applications often did not need: an external API, durable operational history,
+live notification recovery, deterministic fault simulation, transactional
+event delivery, and native cross-platform release automation.
+
+## Known limitations
+
+- The supported G-code subset is intentionally small and rejects arc motion.
+- Toolpath preview is XY only and uses an original lightweight Avalonia
+  renderer optimised for the documented line subset.
+- The simulator advances in deterministic observations rather than real time.
+- Active in-memory coordination resets when the API restarts; persisted history
+  remains available and the desktop reports the fresh authoritative state.
+- History retention is manual in v1.0. Queries are bounded and indexed, but no
+  automatic deletion policy is applied.
+- Local Compose is a development topology with no authentication or TLS.
+
+## Licence and attribution
+
+Original MachineOps code and documentation are released under the
+[MIT licence](LICENSE), copyright Yottaverse Ltd.
+
+Third-party package licences remain with their respective authors. Universal
+G-Code Sender is mentioned only as workflow prior art and is not included in
+this repository.
