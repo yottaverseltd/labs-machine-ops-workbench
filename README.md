@@ -21,6 +21,8 @@ program can be saved through a versioned HTTP contract.
 - Apply ordered, transactional SQL migrations on API startup
 - Connect to the deterministic TCP simulator
 - Start, pause, resume, and cancel a simulated run
+- Receive reduced live snapshots through SignalR
+- Reconnect the live channel and resynchronise from the API snapshot
 - Persist run state and the complete command and response transcript
 - Exercise malformed, slow, duplicate, out-of-order, alarm, disconnect, and burst scenarios
 - Inspect the generated OpenAPI document at `/openapi/v1.json`

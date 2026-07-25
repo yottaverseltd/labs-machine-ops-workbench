@@ -80,12 +80,10 @@ public sealed class MachineOpsApiClient : IMachineOpsApiClient
 
     public async Task<JobRunDto> RefreshRunAsync(CancellationToken cancellationToken)
     {
-        using HttpResponseMessage response = await httpClient.PostAsync(
-            "api/runs/active/refresh",
-            null,
-            cancellationToken);
-        response.EnsureSuccessStatusCode();
-        return await ReadRunAsync(response, cancellationToken);
+        return await httpClient.GetFromJsonAsync<JobRunDto>(
+            "api/runs/active",
+            cancellationToken) ??
+            throw new InvalidDataException("The API returned an empty run response.");
     }
 
     public async Task<JobRunDto> SendRunCommandAsync(

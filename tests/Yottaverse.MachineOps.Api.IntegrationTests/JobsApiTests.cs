@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.SignalR.Client;
 using Yottaverse.MachineOps.Contracts.Jobs;
 
 namespace Yottaverse.MachineOps.Api.IntegrationTests;
@@ -67,6 +68,27 @@ public sealed class JobsApiTests
             CancellationToken.None);
 
         Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task MachineHubAcceptsALongPollingClient()
+    {
+        using MachineOpsApiFactory factory = new();
+        HubConnection connection = new HubConnectionBuilder()
+            .WithUrl(
+                new Uri(factory.Server.BaseAddress, "/hubs/machines"),
+                options =>
+                {
+                    options.HttpMessageHandlerFactory = _ => factory.Server.CreateHandler();
+                    options.Transports =
+                        Microsoft.AspNetCore.Http.Connections.HttpTransportType.LongPolling;
+                })
+            .Build();
+
+        await connection.StartAsync(CancellationToken.None);
+
+        Assert.Equal(HubConnectionState.Connected, connection.State);
+        await connection.DisposeAsync();
     }
 
     private sealed class MachineOpsApiFactory : WebApplicationFactory<Program>

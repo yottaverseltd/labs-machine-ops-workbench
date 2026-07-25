@@ -1,3 +1,4 @@
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Yottaverse.MachineOps.Contracts.Jobs;
@@ -13,22 +14,34 @@ public partial class MainViewModel : ViewModelBase
     private readonly IGCodeFilePicker filePicker;
     private readonly GCodeParser parser;
     private readonly IMachineOpsApiClient apiClient;
+    private readonly IMachineLiveClient liveClient;
+    private readonly object liveSnapshotGate = new();
     private ParsedGCodeProgram? currentProgram;
     private Guid? savedJobId;
+    private MachineSnapshotDto? pendingLiveSnapshot;
+    private int liveDispatchScheduled;
 
     public MainViewModel()
-        : this(new DesignFilePicker(), new GCodeParser(), new DesignApiClient())
+        : this(
+            new DesignFilePicker(),
+            new GCodeParser(),
+            new DesignApiClient(),
+            new DesignLiveClient())
     {
     }
 
     public MainViewModel(
         IGCodeFilePicker filePicker,
         GCodeParser parser,
-        IMachineOpsApiClient apiClient)
+        IMachineOpsApiClient apiClient,
+        IMachineLiveClient liveClient)
     {
         this.filePicker = filePicker;
         this.parser = parser;
         this.apiClient = apiClient;
+        this.liveClient = liveClient;
+        liveClient.SnapshotReceived += OnLiveSnapshotReceived;
+        liveClient.ConnectionStateChanged += OnLiveConnectionStateChanged;
         LoadProgram("simple-pocket.ngc", DemoPrograms.SimplePocket);
     }
 
@@ -61,6 +74,9 @@ public partial class MainViewModel : ViewModelBase
 
     [ObservableProperty]
     public partial string ApiStatus { get; private set; } = "API not checked";
+
+    [ObservableProperty]
+    public partial string LiveStatus { get; private set; } = "Live feed offline";
 
     [ObservableProperty]
     public partial string SavedJobReference { get; private set; } = "Not saved";
@@ -154,6 +170,7 @@ public partial class MainViewModel : ViewModelBase
         {
             ControllerError = string.Empty;
             MachineStatus = "Connecting";
+            await liveClient.StartAsync(CancellationToken.None);
             MachineSnapshotDto snapshot = await apiClient.ConnectSimulatorAsync(
                 5099,
                 CancellationToken.None);
@@ -204,9 +221,6 @@ public partial class MainViewModel : ViewModelBase
             while (run.State is "Running" or "Paused")
             {
                 await Task.Delay(250);
-                ApplySnapshot(await apiClient.GetMachineSnapshotAsync(
-                    true,
-                    CancellationToken.None));
                 run = await apiClient.RefreshRunAsync(CancellationToken.None);
                 ApplyRun(run);
             }
@@ -259,6 +273,49 @@ public partial class MainViewModel : ViewModelBase
             RunProgress = 100;
         }
     }
+
+    private void OnLiveSnapshotReceived(object? sender, LiveSnapshotEventArgs eventArgs)
+    {
+        lock (liveSnapshotGate)
+        {
+            pendingLiveSnapshot = eventArgs.Snapshot;
+        }
+
+        if (Interlocked.Exchange(ref liveDispatchScheduled, 1) == 0)
+        {
+            Dispatcher.UIThread.Post(ApplyLatestLiveSnapshot, DispatcherPriority.Background);
+        }
+    }
+
+    private void ApplyLatestLiveSnapshot()
+    {
+        MachineSnapshotDto? latest;
+        lock (liveSnapshotGate)
+        {
+            latest = pendingLiveSnapshot;
+            pendingLiveSnapshot = null;
+        }
+
+        if (latest is not null)
+        {
+            ApplySnapshot(latest);
+        }
+
+        Interlocked.Exchange(ref liveDispatchScheduled, 0);
+        lock (liveSnapshotGate)
+        {
+            if (pendingLiveSnapshot is not null &&
+                Interlocked.Exchange(ref liveDispatchScheduled, 1) == 0)
+            {
+                Dispatcher.UIThread.Post(ApplyLatestLiveSnapshot, DispatcherPriority.Background);
+            }
+        }
+    }
+
+    private void OnLiveConnectionStateChanged(
+        object? sender,
+        LiveConnectionStateEventArgs eventArgs) =>
+        Dispatcher.UIThread.Post(() => LiveStatus = $"Live feed {eventArgs.State.ToLowerInvariant()}");
 
     private void LoadProgram(string name, string source)
     {
@@ -335,6 +392,45 @@ public partial class MainViewModel : ViewModelBase
             string command,
             CancellationToken cancellationToken) =>
             throw new NotSupportedException();
+    }
+
+    private sealed class DesignLiveClient : IMachineLiveClient
+    {
+        public event EventHandler<LiveSnapshotEventArgs>? SnapshotReceived;
+
+        public event EventHandler<LiveConnectionStateEventArgs>? ConnectionStateChanged;
+
+        public Task StartAsync(CancellationToken cancellationToken)
+        {
+            ConnectionStateChanged?.Invoke(
+                this,
+                new LiveConnectionStateEventArgs("Live"));
+            SnapshotReceived?.Invoke(
+                this,
+                new LiveSnapshotEventArgs(
+                    new MachineSnapshotDto(
+                        Guid.Parse("e0df4a6f-5578-4d53-85b0-17f3828b087d"),
+                        "Connected",
+                        "Idle",
+                        0,
+                        0,
+                        5,
+                        null,
+                        null,
+                        0,
+                        0,
+                        1,
+                        null,
+                        DateTimeOffset.UtcNow)));
+            return Task.CompletedTask;
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            SnapshotReceived = null;
+            ConnectionStateChanged = null;
+            return ValueTask.CompletedTask;
+        }
     }
 }
 

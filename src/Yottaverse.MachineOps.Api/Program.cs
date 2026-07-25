@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Npgsql;
+using Yottaverse.MachineOps.Api.Live;
 using Yottaverse.MachineOps.Api.Persistence;
 using Yottaverse.MachineOps.Application.Abstractions;
 using Yottaverse.MachineOps.Application.Jobs;
@@ -23,6 +24,7 @@ builder.Services
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
+builder.Services.AddSignalR();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<GCodeParser>();
 
@@ -54,6 +56,8 @@ builder.Services.AddScoped<ConnectSimulatorHandler>();
 builder.Services.AddScoped<GetMachineSnapshotHandler>();
 builder.Services.AddScoped<DisconnectMachineHandler>();
 builder.Services.AddSingleton<RunCoordinator>();
+builder.Services.AddHostedService<MachineUpdateBroadcaster>();
+builder.Services.AddHostedService<RunMonitorService>();
 
 WebApplication app = builder.Build();
 
@@ -68,7 +72,7 @@ app.MapOpenApi();
 app.MapGet(
         "/health",
         (TimeProvider timeProvider) => TypedResults.Ok(
-            new ApiStatusDto("MachineOps API", "0.4.0", timeProvider.GetUtcNow())))
+            new ApiStatusDto("MachineOps API", "0.5.0", timeProvider.GetUtcNow())))
     .WithName("GetApiStatus")
     .WithTags("Operations");
 if (!useVolatileStorage)
@@ -87,6 +91,7 @@ if (!useVolatileStorage)
         .WithTags("Operations");
 }
 app.MapControllers();
+app.MapHub<MachineHub>("/hubs/machines");
 
 app.Run();
 

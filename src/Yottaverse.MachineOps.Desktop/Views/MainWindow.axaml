@@ -44,6 +44,8 @@
                     Spacing="7">
           <Ellipse Width="8" Height="8" Fill="#41D6A3" />
           <TextBlock Text="{Binding ApiStatus}" Classes="muted" FontSize="12" />
+          <TextBlock Text="/" Classes="muted" FontSize="12" />
+          <TextBlock Text="{Binding LiveStatus}" Classes="muted" FontSize="12" />
         </StackPanel>
 
         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Spacing="9">
@@ -138,13 +140,21 @@
               </Grid>
               <Button Classes="primary" Command="{Binding StartRunCommand}" Content="Start saved job" />
               <Grid ColumnDefinitions="*,*,*" ColumnSpacing="5">
-                <Button Classes="secondary" Command="{Binding PauseRunCommand}" Content="Pause" />
+                <Button Classes="secondary"
+                        Padding="6,8"
+                        FontSize="11"
+                        Command="{Binding PauseRunCommand}"
+                        Content="Pause" />
                 <Button Grid.Column="1"
                         Classes="secondary"
+                        Padding="6,8"
+                        FontSize="11"
                         Command="{Binding ResumeRunCommand}"
                         Content="Resume" />
                 <Button Grid.Column="2"
                         Classes="secondary"
+                        Padding="6,8"
+                        FontSize="11"
                         Command="{Binding CancelRunCommand}"
                         Content="Cancel" />
               </Grid>

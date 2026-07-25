@@ -18,19 +18,27 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            Uri apiAddress = ResolveApiAddress();
             HttpClient httpClient = new()
             {
-                BaseAddress = ResolveApiAddress(),
+                BaseAddress = apiAddress,
                 Timeout = TimeSpan.FromSeconds(5),
             };
+            MachineOpsApiClient apiClient = new(httpClient);
+            MachineLiveClient liveClient = new(apiAddress, apiClient);
             desktop.MainWindow = new MainWindow
             {
                 DataContext = new MainViewModel(
                     new GCodeFilePicker(),
                     new Core.GCode.GCodeParser(),
-                    new MachineOpsApiClient(httpClient)),
+                    apiClient,
+                    liveClient),
             };
-            desktop.Exit += (_, _) => httpClient.Dispose();
+            desktop.Exit += async (_, _) =>
+            {
+                await liveClient.DisposeAsync();
+                httpClient.Dispose();
+            };
         }
 
         base.OnFrameworkInitializationCompleted();
