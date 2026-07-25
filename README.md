@@ -5,9 +5,9 @@ running CNC jobs against a deterministic simulator. It is built as a practical
 reference for layered .NET desktop systems where the UI, application rules,
 transport, and persistence stay independently testable.
 
-The first release is deliberately small and useful. It opens a G-code file,
-validates supported commands, and renders an XY toolpath without requiring a
-controller or network service.
+The workbench opens a G-code file, validates supported commands, and renders an
+XY toolpath without requiring a controller. When the API is running, the same
+program can be saved through a versioned HTTP contract.
 
 ## Current capability
 
@@ -16,18 +16,28 @@ controller or network service.
 - Convert inch programs to millimetres
 - Report unsupported arc motion and invalid feed rates
 - Preview rapid and cutting moves on a responsive XY surface
+- Save validated jobs through an ASP.NET Core API
+- Inspect the generated OpenAPI document at `/openapi/v1.json`
 - Run entirely offline on Windows, Linux, and macOS
 
 ## Run it
 
-Install the .NET 10 SDK, then run:
+Install the .NET 10 SDK. Start the API:
 
 ```shell
 dotnet restore
+dotnet run --project src/Yottaverse.MachineOps.Api
+```
+
+Then start the desktop app in another terminal:
+
+```shell
 dotnet run --project src/Yottaverse.MachineOps.Desktop
 ```
 
-The app opens with `samples/gcode/simple-pocket.ngc` already loaded.
+The app opens with `samples/gcode/simple-pocket.ngc` already loaded. Choose
+**Save job** to send it to the API. Local import and preview still work while
+the API is stopped.
 
 ## Verify it
 

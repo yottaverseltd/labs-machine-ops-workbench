@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Yottaverse.MachineOps.Application\Yottaverse.MachineOps.Application.csproj" />
+    <ProjectReference Include="..\Yottaverse.MachineOps.Contracts\Yottaverse.MachineOps.Contracts.csproj" />
+    <ProjectReference Include="..\Yottaverse.MachineOps.Core\Yottaverse.MachineOps.Core.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <RootNamespace>Yottaverse.MachineOps.Api</RootNamespace>
+  </PropertyGroup>
+
+</Project>

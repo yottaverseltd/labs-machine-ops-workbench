@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
@@ -16,9 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Yottaverse.MachineOps.Core\Yottaverse.MachineOps.Core.csproj" />
-    <ProjectReference Include="..\..\src\Yottaverse.MachineOps.Desktop\Yottaverse.MachineOps.Desktop.csproj" />
-    <ProjectReference Include="..\..\src\Yottaverse.MachineOps.Application\Yottaverse.MachineOps.Application.csproj" />
+    <ProjectReference Include="..\..\src\Yottaverse.MachineOps.Api\Yottaverse.MachineOps.Api.csproj" />
     <ProjectReference Include="..\..\src\Yottaverse.MachineOps.Contracts\Yottaverse.MachineOps.Contracts.csproj" />
   </ItemGroup>
 

@@ -16,9 +16,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Yottaverse.MachineOps.Core\Yottaverse.MachineOps.Core.csproj" />
-    <ProjectReference Include="..\..\src\Yottaverse.MachineOps.Desktop\Yottaverse.MachineOps.Desktop.csproj" />
     <ProjectReference Include="..\..\src\Yottaverse.MachineOps.Application\Yottaverse.MachineOps.Application.csproj" />
+    <ProjectReference Include="..\..\src\Yottaverse.MachineOps.Core\Yottaverse.MachineOps.Core.csproj" />
     <ProjectReference Include="..\..\src\Yottaverse.MachineOps.Contracts\Yottaverse.MachineOps.Contracts.csproj" />
   </ItemGroup>
 

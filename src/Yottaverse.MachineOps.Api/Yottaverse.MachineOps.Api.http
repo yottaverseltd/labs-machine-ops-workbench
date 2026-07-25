@@ -1,0 +1,19 @@
+@MachineOpsApi = http://localhost:5080
+
+GET {{MachineOpsApi}}/health
+Accept: application/json
+
+###
+
+POST {{MachineOpsApi}}/api/jobs
+Content-Type: application/json
+
+{
+  "name": "Demo pocket",
+  "gCode": "G21 G90\nG0 X0 Y0\nG1 X40 Y0 F500\nG1 X40 Y25\nG1 X0 Y25\nG1 X0 Y0"
+}
+
+###
+
+GET {{MachineOpsApi}}/api/jobs
+Accept: application/json

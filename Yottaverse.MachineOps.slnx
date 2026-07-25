@@ -1,9 +1,14 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/Yottaverse.MachineOps.Api/Yottaverse.MachineOps.Api.csproj" />
+    <Project Path="src/Yottaverse.MachineOps.Application/Yottaverse.MachineOps.Application.csproj" />
+    <Project Path="src/Yottaverse.MachineOps.Contracts/Yottaverse.MachineOps.Contracts.csproj" />
     <Project Path="src/Yottaverse.MachineOps.Core/Yottaverse.MachineOps.Core.csproj" />
     <Project Path="src/Yottaverse.MachineOps.Desktop/Yottaverse.MachineOps.Desktop.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Yottaverse.MachineOps.Api.IntegrationTests/Yottaverse.MachineOps.Api.IntegrationTests.csproj" />
+    <Project Path="tests/Yottaverse.MachineOps.Application.Tests/Yottaverse.MachineOps.Application.Tests.csproj" />
     <Project Path="tests/Yottaverse.MachineOps.Architecture.Tests/Yottaverse.MachineOps.Architecture.Tests.csproj" />
     <Project Path="tests/Yottaverse.MachineOps.Core.Tests/Yottaverse.MachineOps.Core.Tests.csproj" />
   </Folder>

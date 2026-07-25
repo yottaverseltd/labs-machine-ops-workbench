@@ -1,0 +1,11 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Yottaverse.MachineOps.Core\Yottaverse.MachineOps.Core.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <RootNamespace>Yottaverse.MachineOps.Application</RootNamespace>
+  </PropertyGroup>
+
+</Project>

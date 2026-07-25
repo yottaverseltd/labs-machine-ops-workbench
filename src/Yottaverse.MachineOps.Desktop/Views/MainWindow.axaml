@@ -43,11 +43,12 @@
                     VerticalAlignment="Center"
                     Spacing="7">
           <Ellipse Width="8" Height="8" Fill="#41D6A3" />
-          <TextBlock Text="Local parser ready" Classes="muted" FontSize="12" />
+          <TextBlock Text="{Binding ApiStatus}" Classes="muted" FontSize="12" />
         </StackPanel>
 
         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Spacing="9">
           <Button Classes="secondary" Command="{Binding LoadSampleCommand}" Content="Load sample" />
+          <Button Classes="secondary" Command="{Binding SaveJobCommand}" Content="Save job" />
           <Button Classes="primary" Command="{Binding OpenFileCommand}" Content="Open G-code" />
         </StackPanel>
       </Grid>
