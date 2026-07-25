@@ -1,0 +1,64 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Yottaverse.MachineOps.Desktop.App"
+             RequestedThemeVariant="Dark">
+
+    <Application.Styles>
+        <FluentTheme DensityStyle="Compact" />
+        <Style Selector="Window">
+            <Setter Property="Background" Value="#0B1118" />
+            <Setter Property="Foreground" Value="#DDE6EE" />
+            <Setter Property="FontFamily" Value="avares://Avalonia.Fonts.Inter/Assets#Inter" />
+        </Style>
+        <Style Selector="Border.card">
+            <Setter Property="Background" Value="#111A24" />
+            <Setter Property="BorderBrush" Value="#253445" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="18" />
+        </Style>
+        <Style Selector="Border.metric">
+            <Setter Property="Background" Value="#0E1720" />
+            <Setter Property="BorderBrush" Value="#213244" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="12,9" />
+        </Style>
+        <Style Selector="Button.primary">
+            <Setter Property="Background" Value="#2B80FF" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="CornerRadius" Value="5" />
+            <Setter Property="Padding" Value="16,9" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="Button.secondary">
+            <Setter Property="Background" Value="#172332" />
+            <Setter Property="Foreground" Value="#DDE6EE" />
+            <Setter Property="BorderBrush" Value="#304257" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="5" />
+            <Setter Property="Padding" Value="14,8" />
+        </Style>
+        <Style Selector="TextBlock.eyebrow">
+            <Setter Property="Foreground" Value="#718399" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="LetterSpacing" Value="1.2" />
+        </Style>
+        <Style Selector="TextBlock.heading">
+            <Setter Property="Foreground" Value="#F4F7FA" />
+            <Setter Property="FontSize" Value="17" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="TextBlock.muted">
+            <Setter Property="Foreground" Value="#91A2B5" />
+        </Style>
+        <Style Selector="TextBox.editor">
+            <Setter Property="Background" Value="#0B1118" />
+            <Setter Property="Foreground" Value="#C7D4E1" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="FontFamily" Value="Cascadia Mono, Consolas, monospace" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+    </Application.Styles>
+</Application>

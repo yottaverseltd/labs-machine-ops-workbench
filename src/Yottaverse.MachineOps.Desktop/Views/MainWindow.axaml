@@ -1,0 +1,204 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Yottaverse.MachineOps.Desktop.ViewModels"
+        xmlns:controls="using:Yottaverse.MachineOps.Desktop.Controls"
+        xmlns:gcode="using:Yottaverse.MachineOps.Core.GCode"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        x:Class="Yottaverse.MachineOps.Desktop.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        mc:Ignorable="d"
+        d:DesignWidth="1440"
+        d:DesignHeight="900"
+        Width="1440"
+        Height="900"
+        MinWidth="1080"
+        MinHeight="700"
+        Title="MachineOps Workbench">
+
+  <Design.DataContext>
+    <vm:MainViewModel />
+  </Design.DataContext>
+
+  <Grid RowDefinitions="64,*,34">
+    <Border Grid.Row="0" Background="#0E1720" BorderBrush="#253445" BorderThickness="0,0,0,1">
+      <Grid Margin="22,0" ColumnDefinitions="Auto,*,Auto">
+        <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+          <Border Width="34" Height="34" CornerRadius="7" Background="#2B80FF">
+            <Path Width="19"
+                  Height="19"
+                  Stretch="Uniform"
+                  Fill="White"
+                  Data="M2,3 L9,3 L9,6 L12,6 L12,3 L19,3 L19,10 L16,10 L16,13 L19,13 L19,20 L12,20 L12,17 L9,17 L9,20 L2,20 L2,13 L5,13 L5,10 L2,10 Z" />
+          </Border>
+          <StackPanel Spacing="1">
+            <TextBlock Text="MACHINEOPS" FontSize="15" FontWeight="Bold" LetterSpacing="1.1" />
+            <TextBlock Text="WORKBENCH  /  LOCAL PREVIEW" Classes="eyebrow" FontSize="9" />
+          </StackPanel>
+        </StackPanel>
+
+        <StackPanel Grid.Column="1"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Spacing="7">
+          <Ellipse Width="8" Height="8" Fill="#41D6A3" />
+          <TextBlock Text="Local parser ready" Classes="muted" FontSize="12" />
+        </StackPanel>
+
+        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Spacing="9">
+          <Button Classes="secondary" Command="{Binding LoadSampleCommand}" Content="Load sample" />
+          <Button Classes="primary" Command="{Binding OpenFileCommand}" Content="Open G-code" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="1" Margin="22" ColumnDefinitions="260,*,350" ColumnSpacing="16">
+      <Border Grid.Column="0" Classes="card">
+        <Grid RowDefinitions="Auto,Auto,20,Auto,14,Auto,14,Auto,*">
+          <TextBlock Text="PROGRAM" Classes="eyebrow" />
+          <TextBlock Grid.Row="1"
+                     Margin="0,7,0,0"
+                     Text="{Binding FileName}"
+                     TextWrapping="Wrap"
+                     FontSize="18"
+                     FontWeight="SemiBold" />
+
+          <TextBlock Grid.Row="3" Text="INSPECTION" Classes="eyebrow" />
+
+          <Border Grid.Row="5" Classes="metric">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel>
+                <TextBlock Text="Tool moves" Classes="muted" FontSize="11" />
+                <TextBlock Text="{Binding SegmentCount}" FontSize="19" FontWeight="SemiBold" />
+              </StackPanel>
+              <PathIcon Width="18"
+                        Foreground="#41D6A3"
+                        Data="M3,16 L8,11 L11,14 L18,7 M13,7 L18,7 L18,12" />
+            </Grid>
+          </Border>
+
+          <StackPanel Grid.Row="7" Spacing="8">
+            <Border Classes="metric">
+              <StackPanel>
+                <TextBlock Text="XY work area" Classes="muted" FontSize="11" />
+                <TextBlock Text="{Binding WorkArea}" FontSize="15" FontWeight="SemiBold" />
+              </StackPanel>
+            </Border>
+            <Border Classes="metric">
+              <StackPanel>
+                <TextBlock Text="Travel distance" Classes="muted" FontSize="11" />
+                <TextBlock Text="{Binding TravelDistance}" FontSize="15" FontWeight="SemiBold" />
+              </StackPanel>
+            </Border>
+            <Border Classes="metric">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel>
+                  <TextBlock Text="Findings" Classes="muted" FontSize="11" />
+                  <TextBlock Text="{Binding WarningCount}" FontSize="15" FontWeight="SemiBold" />
+                </StackPanel>
+                <Ellipse Width="9" Height="9" Fill="#F6B84A" VerticalAlignment="Center" />
+              </Grid>
+            </Border>
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <Grid Grid.Column="1" RowDefinitions="*,190" RowSpacing="16">
+        <Border Classes="card" Padding="0">
+          <Grid RowDefinitions="50,*">
+            <Border BorderBrush="#253445" BorderThickness="0,0,0,1" Padding="17,0">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                  <TextBlock Text="XY TOOLPATH" Classes="heading" />
+                  <Border Background="#17382F" CornerRadius="10" Padding="8,3">
+                    <TextBlock Text="PREVIEW" Foreground="#56E1B2" FontSize="9" FontWeight="Bold" />
+                  </Border>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Rectangle Width="18" Height="2" Fill="#41D6A3" VerticalAlignment="Center" />
+                    <TextBlock Text="Cut" Classes="muted" FontSize="11" />
+                  </StackPanel>
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Rectangle Width="18" Height="1" Fill="#60758D" VerticalAlignment="Center" />
+                    <TextBlock Text="Rapid" Classes="muted" FontSize="11" />
+                  </StackPanel>
+                </StackPanel>
+              </Grid>
+            </Border>
+            <controls:ToolpathView Grid.Row="1" Segments="{Binding Segments}" />
+          </Grid>
+        </Border>
+
+        <Border Grid.Row="1" Classes="card" Padding="0">
+          <Grid RowDefinitions="45,*">
+            <Border BorderBrush="#253445" BorderThickness="0,0,0,1" Padding="16,0">
+              <TextBlock Text="VALIDATION" Classes="heading" FontSize="14" VerticalAlignment="Center" />
+            </Border>
+            <ListBox Grid.Row="1"
+                     Margin="8"
+                     Background="Transparent"
+                     BorderThickness="0"
+                     ItemsSource="{Binding Diagnostics}">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="gcode:GCodeDiagnostic">
+                  <Grid Margin="5,4" ColumnDefinitions="58,82,*">
+                    <TextBlock Text="{Binding LineNumber, StringFormat='Line {0}'}"
+                               Foreground="#718399"
+                               FontFamily="Cascadia Mono, Consolas, monospace"
+                               FontSize="11" />
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding Code}"
+                               Foreground="#F6B84A"
+                               FontFamily="Cascadia Mono, Consolas, monospace"
+                               FontSize="11" />
+                    <TextBlock Grid.Column="2" Text="{Binding Message}" Foreground="#BCC9D5" FontSize="11" />
+                  </Grid>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </Grid>
+        </Border>
+      </Grid>
+
+      <Border Grid.Column="2" Classes="card" Padding="0">
+        <Grid RowDefinitions="50,*">
+          <Border BorderBrush="#253445" BorderThickness="0,0,0,1" Padding="17,0">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Text="SOURCE" Classes="heading" VerticalAlignment="Center" />
+              <TextBlock Grid.Column="1"
+                         Text="READ ONLY"
+                         Classes="eyebrow"
+                         FontSize="9"
+                         VerticalAlignment="Center" />
+            </Grid>
+          </Border>
+          <TextBox Grid.Row="1"
+                   Classes="editor"
+                   Margin="12"
+                   Text="{Binding Source}"
+                   IsReadOnly="True"
+                   AcceptsReturn="True"
+                   TextWrapping="NoWrap"
+                   ScrollViewer.VerticalScrollBarVisibility="Auto"
+                   ScrollViewer.HorizontalScrollBarVisibility="Auto" />
+        </Grid>
+      </Border>
+    </Grid>
+
+    <Border Grid.Row="2" Background="#0E1720" BorderBrush="#253445" BorderThickness="0,1,0,0">
+      <Grid Margin="22,0" ColumnDefinitions="*,Auto">
+        <TextBlock Text="{Binding Status}"
+                   Foreground="#91A2B5"
+                   FontSize="11"
+                   VerticalAlignment="Center" />
+        <TextBlock Grid.Column="1"
+                   Text=".NET 10  /  AVALONIA 12  /  SIMULATOR SAFE"
+                   Classes="eyebrow"
+                   FontSize="9"
+                   VerticalAlignment="Center" />
+      </Grid>
+    </Border>
+  </Grid>
+</Window>
