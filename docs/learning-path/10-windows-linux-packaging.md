@@ -22,6 +22,12 @@ and lays out a Debian package beneath `/opt/machineops-workbench`. The package
 adds a command symlink and a desktop entry. Removing the package removes those
 files without touching PostgreSQL data.
 
+The Linux release is an acceptance boundary, not only a packaging convenience.
+It checks that the Avalonia replacement has not inherited hidden Windows-only
+assumptions during modernisation. CI installs the Debian package on Ubuntu
+24.04, launches the application under Xvfb, removes it, and verifies that the
+application directory is gone.
+
 ## Services
 
 The API and simulator are separate Linux container images. Compose supplies
@@ -40,3 +46,6 @@ The release jobs also install the packages they just built. Windows launches
 the installed application for ten seconds before running its uninstaller. The
 Linux job installs the Debian package into Ubuntu 24.04, starts Avalonia under
 Xvfb, removes the package, and checks that its application directory is gone.
+
+For the broader migration reasoning, see the
+[Java/Swing to C#/Avalonia guide](../modernisation/java-swing-to-avalonia.md).
