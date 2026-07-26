@@ -97,6 +97,21 @@ public partial class MainViewModel : ViewModelBase
     public partial string MachinePosition { get; private set; } = "X 0.000  Y 0.000  Z 0.000";
 
     [ObservableProperty]
+    public partial string MachineFeed { get; private set; } = "Not reported";
+
+    [ObservableProperty]
+    public partial string MachineSpindle { get; private set; } = "Not reported";
+
+    [ObservableProperty]
+    public partial Position3D? LiveToolPosition { get; private set; }
+
+    [ObservableProperty]
+    public partial bool HasLiveToolPosition { get; private set; }
+
+    [ObservableProperty]
+    public partial string ToolpathMode { get; private set; } = "PREVIEW";
+
+    [ObservableProperty]
     public partial string ControllerError { get; private set; } = string.Empty;
 
     [ObservableProperty]
@@ -120,7 +135,9 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     public partial string HistorySummary { get; private set; } = "Select Refresh to load persisted activity";
 
-    [RelayCommand]
+    private bool CanChangeProgram() => !IsRunActive();
+
+    [RelayCommand(CanExecute = nameof(CanChangeProgram))]
     private async Task OpenFileAsync()
     {
         try
@@ -137,13 +154,16 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanChangeProgram))]
     private void LoadSample()
     {
         LoadProgram("simple-pocket.ngc", DemoPrograms.SimplePocket);
     }
 
-    private bool CanSave() => currentProgram?.IsValid == true && !IsBusy;
+    private bool CanSave() =>
+        currentProgram?.IsValid == true &&
+        !IsBusy &&
+        CanChangeProgram();
 
     [RelayCommand(CanExecute = nameof(CanSave))]
     private async Task SaveJobAsync(CancellationToken cancellationToken)
@@ -188,7 +208,9 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
-    [RelayCommand]
+    private bool CanConnectSimulator() => !HasLiveToolPosition;
+
+    [RelayCommand(CanExecute = nameof(CanConnectSimulator))]
     private async Task ConnectSimulatorAsync(CancellationToken cancellationToken)
     {
         try
@@ -216,7 +238,9 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
-    [RelayCommand]
+    private bool CanDisconnectSimulator() => HasLiveToolPosition;
+
+    [RelayCommand(CanExecute = nameof(CanDisconnectSimulator))]
     private async Task DisconnectSimulatorAsync(CancellationToken cancellationToken)
     {
         try
@@ -234,7 +258,10 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
-    private bool CanStartRun() => savedJobId.HasValue;
+    private bool CanStartRun() =>
+        savedJobId.HasValue &&
+        HasLiveToolPosition &&
+        !IsRunActive();
 
     [RelayCommand(CanExecute = nameof(CanStartRun))]
     private async Task StartRunAsync(CancellationToken cancellationToken)
@@ -248,6 +275,7 @@ public partial class MainViewModel : ViewModelBase
         {
             JobRunDto run = await apiClient.StartRunAsync(jobId, cancellationToken);
             ApplyRun(run);
+            Status = "Run started. Live machine state is updating.";
             while (run.State is "Running" or "Paused")
             {
                 await Task.Delay(250, cancellationToken);
@@ -269,15 +297,21 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
-    [RelayCommand]
+    private bool CanPauseRun() => RunState == "Running";
+
+    [RelayCommand(CanExecute = nameof(CanPauseRun))]
     private async Task PauseRunAsync(CancellationToken cancellationToken) =>
         await SendRunCommandAsync("pause", cancellationToken);
 
-    [RelayCommand]
+    private bool CanResumeRun() => RunState == "Paused";
+
+    [RelayCommand(CanExecute = nameof(CanResumeRun))]
     private async Task ResumeRunAsync(CancellationToken cancellationToken) =>
         await SendRunCommandAsync("resume", cancellationToken);
 
-    [RelayCommand]
+    private bool CanCancelRun() => IsRunActive();
+
+    [RelayCommand(CanExecute = nameof(CanCancelRun))]
     private async Task CancelRunAsync(CancellationToken cancellationToken) =>
         await SendRunCommandAsync("cancel", cancellationToken);
 
@@ -287,7 +321,15 @@ public partial class MainViewModel : ViewModelBase
     {
         try
         {
-            ApplyRun(await apiClient.SendRunCommandAsync(command, cancellationToken));
+            JobRunDto run = await apiClient.SendRunCommandAsync(command, cancellationToken);
+            ApplyRun(run);
+            Status = run.State switch
+            {
+                "Paused" => "Run paused.",
+                "Running" => "Run resumed.",
+                "Cancelled" => "Run cancelled.",
+                _ => $"Run state changed to {run.State}.",
+            };
         }
         catch (HttpRequestException exception)
         {
@@ -353,8 +395,30 @@ public partial class MainViewModel : ViewModelBase
         MachineStatus = $"{snapshot.ConnectionStatus} / {snapshot.OperatingStatus}";
         MachinePosition =
             $"X {snapshot.X:0.000}  Y {snapshot.Y:0.000}  Z {snapshot.Z:0.000}";
+        MachineFeed = snapshot.FeedRate is double feedRate
+            ? $"{feedRate.ToString("N0", CultureInfo.CurrentCulture)} mm/min"
+            : "Not reported";
+        MachineSpindle = snapshot.SpindleSpeed is double spindleSpeed
+            ? $"{spindleSpeed.ToString("N0", CultureInfo.CurrentCulture)} rpm"
+            : "Not reported";
+        bool isConnected = string.Equals(
+            snapshot.ConnectionStatus,
+            "Connected",
+            StringComparison.OrdinalIgnoreCase);
+        HasLiveToolPosition = isConnected;
+        LiveToolPosition = isConnected
+            ? new Position3D(snapshot.X, snapshot.Y, snapshot.Z)
+            : null;
+        ToolpathMode = isConnected ? "LIVE" : "PREVIEW";
         ControllerError = snapshot.LastError ?? string.Empty;
-        RunProgress = snapshot.Progress;
+        if (IsRunActive())
+        {
+            RunProgress = snapshot.Progress;
+        }
+
+        ConnectSimulatorCommand.NotifyCanExecuteChanged();
+        DisconnectSimulatorCommand.NotifyCanExecuteChanged();
+        StartRunCommand.NotifyCanExecuteChanged();
     }
 
     private void ApplyRun(JobRunDto run)
@@ -364,6 +428,21 @@ public partial class MainViewModel : ViewModelBase
         {
             RunProgress = 100;
         }
+
+        NotifyRunCommandStates();
+    }
+
+    private bool IsRunActive() => RunState is "Running" or "Paused";
+
+    private void NotifyRunCommandStates()
+    {
+        OpenFileCommand.NotifyCanExecuteChanged();
+        LoadSampleCommand.NotifyCanExecuteChanged();
+        SaveJobCommand.NotifyCanExecuteChanged();
+        StartRunCommand.NotifyCanExecuteChanged();
+        PauseRunCommand.NotifyCanExecuteChanged();
+        ResumeRunCommand.NotifyCanExecuteChanged();
+        CancelRunCommand.NotifyCanExecuteChanged();
     }
 
     private void OnLiveSnapshotReceived(object? sender, LiveSnapshotEventArgs eventArgs)
@@ -449,8 +528,9 @@ public partial class MainViewModel : ViewModelBase
             : "The program has validation errors.";
         SavedJobReference = "Not saved";
         savedJobId = null;
-        StartRunCommand.NotifyCanExecuteChanged();
-        SaveJobCommand.NotifyCanExecuteChanged();
+        RunState = "No active run";
+        RunProgress = 0;
+        NotifyRunCommandStates();
     }
 
     private static ActivityLine[] BuildActivity(OperationsHistoryDto history)

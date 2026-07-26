@@ -28,12 +28,12 @@ public sealed class RunCoordinatorTests
         Assert.Same(resumed, cancelled);
         Assert.Equal(
             [
-                ControllerOperation.Start,
                 ControllerOperation.Pause,
                 ControllerOperation.Resume,
                 ControllerOperation.Cancel,
             ],
             context.Controller.Operations);
+        Assert.Equal(1, context.Controller.StartCount);
         Assert.Equal(
             [
                 JobRunState.Running,
@@ -42,6 +42,7 @@ public sealed class RunCoordinatorTests
                 JobRunState.Cancelled,
             ],
             context.Runs.SavedStates);
+        Assert.Equal(context.Job.Program.Segments, context.Controller.StartedToolpath);
     }
 
     [Fact]
@@ -75,7 +76,8 @@ public sealed class RunCoordinatorTests
                 () => coordinator.ResumeAsync(CancellationToken.None));
 
         Assert.Contains("cannot resume", error.Message, StringComparison.Ordinal);
-        Assert.Equal([ControllerOperation.Start], context.Controller.Operations);
+        Assert.Empty(context.Controller.Operations);
+        Assert.Equal(1, context.Controller.StartCount);
         Assert.Equal(JobRunState.Running, coordinator.ActiveRun?.State);
     }
 
@@ -139,6 +141,10 @@ public sealed class RunCoordinatorTests
 
         public List<ControllerOperation> Operations { get; } = [];
 
+        public IReadOnlyList<ToolpathSegment>? StartedToolpath { get; private set; }
+
+        public int StartCount { get; private set; }
+
         public ControllerOperation? RejectedOperation { get; set; }
 
         public Task<MachineSnapshot> ConnectAsync(
@@ -148,6 +154,15 @@ public sealed class RunCoordinatorTests
 
         public Task<MachineSnapshot> RefreshAsync(CancellationToken cancellationToken) =>
             Task.FromResult(Snapshot);
+
+        public Task<MachineSnapshot> StartAsync(
+            IReadOnlyList<ToolpathSegment> toolpath,
+            CancellationToken cancellationToken)
+        {
+            StartCount++;
+            StartedToolpath = toolpath;
+            return Task.FromResult(Snapshot);
+        }
 
         public Task<MachineSnapshot> ExecuteAsync(
             ControllerOperation operation,

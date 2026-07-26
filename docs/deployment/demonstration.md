@@ -23,3 +23,17 @@ For a terminal-only acceptance check:
 
 The script starts Compose, saves a sample through HTTP, connects the simulator,
 runs it to completion, and confirms that persisted history can find the job.
+
+## Visual Studio debugging
+
+Stop the complete Compose stack and start only its PostgreSQL dependency:
+
+```powershell
+docker compose down
+docker compose up -d postgres
+```
+
+Open the solution in Visual Studio 2026, select the `Local development`
+solution launch profile, and press F5. Visual Studio starts the simulator, API,
+and desktop in that order. The API listens on `http://localhost:5080`, matching
+the desktop default.

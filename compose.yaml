@@ -6,8 +6,7 @@ services:
       context: .
       dockerfile: deploy/docker/Api.Dockerfile
     environment:
-      Urls: http://+:8080
-      ConnectionStrings__MachineOps: Host=postgres;Port=5432;Database=machineops;Username=machineops;Password=machineops
+      ConnectionStrings__MachineOps: Host=postgres;Port=5432;Database=machineops;Username=machineops;Password=machineops;GSS Encryption Mode=Disable
       Simulator__Host: simulator
     ports:
       - "5080:8080"

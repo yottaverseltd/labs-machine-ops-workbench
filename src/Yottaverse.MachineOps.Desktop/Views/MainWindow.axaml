@@ -122,6 +122,16 @@
                          Classes="muted"
                          FontSize="10"
                          FontFamily="Cascadia Mono, Consolas, monospace" />
+              <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                <StackPanel Spacing="1">
+                  <TextBlock Text="FEED" Classes="eyebrow" FontSize="8" />
+                  <TextBlock Text="{Binding MachineFeed}" Classes="muted" FontSize="10" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Spacing="1">
+                  <TextBlock Text="SPINDLE" Classes="eyebrow" FontSize="8" />
+                  <TextBlock Text="{Binding MachineSpindle}" Classes="muted" FontSize="10" />
+                </StackPanel>
+              </Grid>
               <Grid ColumnDefinitions="*,Auto">
                 <TextBlock Text="{Binding RunState}" Classes="muted" FontSize="10" />
                 <TextBlock Grid.Column="1"
@@ -202,7 +212,7 @@
                   <Border Background="{DynamicResource WorkbenchPreviewBrush}"
                           CornerRadius="10"
                           Padding="8,3">
-                    <TextBlock Text="PREVIEW"
+                    <TextBlock Text="{Binding ToolpathMode}"
                                Foreground="{DynamicResource WorkbenchSuccessBrightBrush}"
                                FontSize="9"
                                FontWeight="Bold" />
@@ -223,10 +233,21 @@
                                VerticalAlignment="Center" />
                     <TextBlock Text="Rapid" Classes="muted" FontSize="11" />
                   </StackPanel>
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Ellipse Width="8"
+                             Height="8"
+                             Fill="{DynamicResource WorkbenchWarningBrush}"
+                             VerticalAlignment="Center" />
+                    <TextBlock Text="Tool" Classes="muted" FontSize="11" />
+                  </StackPanel>
                 </StackPanel>
               </Grid>
             </Border>
-            <controls:ToolpathView Grid.Row="1" Segments="{Binding Segments}" />
+            <controls:ToolpathView Grid.Row="1"
+                                   Segments="{Binding Segments}"
+                                   CurrentPosition="{Binding LiveToolPosition}"
+                                   Progress="{Binding RunProgress}"
+                                   IsLive="{Binding HasLiveToolPosition}" />
           </Grid>
         </Border>
 

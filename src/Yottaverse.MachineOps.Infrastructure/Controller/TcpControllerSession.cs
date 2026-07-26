@@ -150,20 +150,55 @@ public sealed class TcpControllerSession : IControllerSession, IAsyncDisposable
         return Snapshot;
     }
 
-    public async Task<MachineSnapshot> ExecuteAsync(
+    public Task<MachineSnapshot> StartAsync(
+        IReadOnlyList<ToolpathSegment> toolpath,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(toolpath);
+        if (toolpath.Count == 0)
+        {
+            throw new ArgumentException(
+                "A controller run requires at least one toolpath segment.",
+                nameof(toolpath));
+        }
+
+        ControllerRunPlanWire plan = new(
+            toolpath.Select(segment => new ControllerPathSegmentWire(
+                segment.From.X,
+                segment.From.Y,
+                segment.From.Z,
+                segment.To.X,
+                segment.To.Y,
+                segment.To.Z,
+                segment.Mode.ToString(),
+                segment.FeedRate)).ToArray());
+        return ExecuteCommandAsync(
+            ControllerMessageTypes.Start,
+            ControllerProtocolJson.SerializeRunPlan(plan),
+            cancellationToken);
+    }
+
+    public Task<MachineSnapshot> ExecuteAsync(
         ControllerOperation operation,
         CancellationToken cancellationToken)
     {
         string messageType = operation switch
         {
-            ControllerOperation.Start => ControllerMessageTypes.Start,
             ControllerOperation.Pause => ControllerMessageTypes.Pause,
             ControllerOperation.Resume => ControllerMessageTypes.Resume,
             ControllerOperation.Cancel => ControllerMessageTypes.Cancel,
             _ => throw new ArgumentOutOfRangeException(nameof(operation)),
         };
+        return ExecuteCommandAsync(messageType, payload: null, cancellationToken);
+    }
+
+    private async Task<MachineSnapshot> ExecuteCommandAsync(
+        string messageType,
+        string? payload,
+        CancellationToken cancellationToken)
+    {
         ControllerEventMessage response = await SendAndWaitAsync(
-            new ControllerCommandMessage(messageType, Guid.NewGuid()),
+            new ControllerCommandMessage(messageType, Guid.NewGuid(), Payload: payload),
             TimeSpan.FromSeconds(3),
             cancellationToken);
         if (response.Type != ControllerMessageTypes.CommandAccepted)

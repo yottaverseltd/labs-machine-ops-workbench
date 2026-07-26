@@ -14,8 +14,8 @@ sequenceDiagram
 
     UI->>API: POST /api/runs with JobId
     API->>App: StartAsync
-    App->>TCP: Execute Start
-    TCP->>Sim: start plus correlation ID
+    App->>TCP: Start with saved toolpath
+    TCP->>Sim: start plus execution-plan payload
     Sim-->>TCP: command_accepted plus sequence
     TCP->>DB: Persist protocol response
     App->>DB: Persist running JobRun
@@ -25,7 +25,7 @@ sequenceDiagram
         TCP->>Sim: get_state
         Sim-->>TCP: state and progress
         App->>DB: Persist run progress
-        Hub-->>UI: MachineSnapshotDto
+        Hub-->>UI: MachineSnapshotDto with live tool position
     end
 ```
 

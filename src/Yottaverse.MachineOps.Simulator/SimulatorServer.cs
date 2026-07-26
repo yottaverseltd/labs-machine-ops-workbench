@@ -110,6 +110,7 @@ public sealed class SimulatorServer : IAsyncDisposable
             };
             long sequence = 0;
             int replayIndex = 0;
+            ControllerRunPlanWire? runPlan = null;
             ControllerStateWire state = new("Idle", 0, 0, 0, null, null, 0, 0);
 
             while (!cancellationToken.IsCancellationRequested)
@@ -192,18 +193,7 @@ public sealed class SimulatorServer : IAsyncDisposable
                         }
                         else if (state.OperatingState == "Running")
                         {
-                            double progress = Math.Min(100, state.Progress + 10);
-                            state = state with
-                            {
-                                X = progress * 0.7,
-                                Y = progress <= 50 ? progress : 100 - progress,
-                                Z = -2,
-                                FeedRate = 600,
-                                SpindleSpeed = 12_000,
-                                Progress = progress,
-                                LastAcknowledgedCommand = (int)(progress / 10),
-                                OperatingState = progress >= 100 ? "Idle" : "Running",
-                            };
+                            state = AdvanceRun(state, runPlan);
                         }
 
                         ControllerEventMessage stateMessage = new(
@@ -253,10 +243,35 @@ public sealed class SimulatorServer : IAsyncDisposable
                             break;
                         }
 
+                        try
+                        {
+                            runPlan = string.IsNullOrWhiteSpace(command.Payload)
+                                ? null
+                                : ControllerProtocolJson.DeserializeRunPlan(command.Payload);
+                        }
+                        catch (System.Text.Json.JsonException)
+                        {
+                            runPlan = null;
+                        }
+
+                        if (runPlan?.Segments is not { Count: > 0 })
+                        {
+                            await SendProtocolErrorAsync(
+                                writer,
+                                command,
+                                ++sequence,
+                                "A start command requires a valid execution plan.");
+                            break;
+                        }
+
+                        ControllerPathSegmentWire firstSegment = runPlan.Segments[0];
                         state = state with
                         {
                             OperatingState = "Running",
-                            FeedRate = 600,
+                            X = firstSegment.FromX,
+                            Y = firstSegment.FromY,
+                            Z = firstSegment.FromZ,
+                            FeedRate = firstSegment.FeedRate,
                             SpindleSpeed = 12_000,
                             Progress = 0,
                             LastAcknowledgedCommand = 0,
@@ -350,6 +365,78 @@ public sealed class SimulatorServer : IAsyncDisposable
                 command.CorrelationId,
                 sequence,
                 state));
+
+    private static ControllerStateWire AdvanceRun(
+        ControllerStateWire state,
+        ControllerRunPlanWire? runPlan)
+    {
+        if (runPlan?.Segments is not { Count: > 0 } segments)
+        {
+            return state with
+            {
+                OperatingState = "Idle",
+                FeedRate = 0,
+                SpindleSpeed = 0,
+            };
+        }
+
+        double progress = Math.Min(100, state.Progress + 5);
+        double totalDistance = segments.Sum(SegmentLength);
+        double distanceToTravel = totalDistance * (progress / 100);
+        ControllerPathSegmentWire activeSegment = segments[^1];
+        double x = activeSegment.ToX;
+        double y = activeSegment.ToY;
+        double z = activeSegment.ToZ;
+
+        foreach (ControllerPathSegmentWire segment in segments)
+        {
+            double segmentLength = SegmentLength(segment);
+            if (segmentLength <= 0)
+            {
+                activeSegment = segment;
+                continue;
+            }
+
+            if (distanceToTravel <= segmentLength)
+            {
+                double fraction = distanceToTravel / segmentLength;
+                activeSegment = segment;
+                x = Interpolate(segment.FromX, segment.ToX, fraction);
+                y = Interpolate(segment.FromY, segment.ToY, fraction);
+                z = Interpolate(segment.FromZ, segment.ToZ, fraction);
+                break;
+            }
+
+            distanceToTravel -= segmentLength;
+        }
+
+        bool completed = progress >= 100;
+        int acknowledgedCommand = Math.Min(
+            segments.Count,
+            (int)Math.Ceiling(segments.Count * (progress / 100)));
+        return state with
+        {
+            X = x,
+            Y = y,
+            Z = z,
+            FeedRate = completed ? 0 : activeSegment.FeedRate,
+            SpindleSpeed = completed ? 0 : 12_000,
+            Progress = progress,
+            LastAcknowledgedCommand = acknowledgedCommand,
+            OperatingState = completed ? "Idle" : "Running",
+        };
+    }
+
+    private static double SegmentLength(ControllerPathSegmentWire segment)
+    {
+        double x = segment.ToX - segment.FromX;
+        double y = segment.ToY - segment.FromY;
+        double z = segment.ToZ - segment.FromZ;
+        return Math.Sqrt((x * x) + (y * y) + (z * z));
+    }
+
+    private static double Interpolate(double from, double to, double fraction) =>
+        from + ((to - from) * fraction);
 
     private ControllerStateWire[] LoadReplayStates()
     {

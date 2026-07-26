@@ -34,6 +34,19 @@ public sealed record ControllerStateWire(
     double Progress,
     int LastAcknowledgedCommand);
 
+public sealed record ControllerPathSegmentWire(
+    double FromX,
+    double FromY,
+    double FromZ,
+    double ToX,
+    double ToY,
+    double ToZ,
+    string MotionMode,
+    double? FeedRate);
+
+public sealed record ControllerRunPlanWire(
+    IReadOnlyList<ControllerPathSegmentWire> Segments);
+
 public sealed record ControllerEventMessage(
     string Type,
     Guid? CorrelationId,
@@ -57,4 +70,10 @@ public static class ControllerProtocolJson
 
     public static ControllerEventMessage? DeserializeEvent(string json) =>
         JsonSerializer.Deserialize<ControllerEventMessage>(json, Options);
+
+    public static string SerializeRunPlan(ControllerRunPlanWire plan) =>
+        JsonSerializer.Serialize(plan, Options);
+
+    public static ControllerRunPlanWire? DeserializeRunPlan(string json) =>
+        JsonSerializer.Deserialize<ControllerRunPlanWire>(json, Options);
 }

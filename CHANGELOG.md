@@ -2,6 +2,16 @@
 
 All notable changes are recorded here. Versions follow semantic versioning.
 
+## Unreleased
+
+- Added live toolhead movement and completed-path rendering to the Avalonia
+  toolpath view.
+- Sent saved job geometry to the simulator so reported positions follow the
+  selected G-code program.
+- Added live feed and spindle values and state-aware desktop commands.
+- Added a Visual Studio multi-project launch profile and aligned local ports.
+- Removed avoidable local container startup warnings.
+
 ## 1.0.0 - 2026-07-25
 
 - Added paged search across jobs, runs, alarms, and protocol messages.
