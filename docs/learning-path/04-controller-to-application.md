@@ -22,17 +22,20 @@ connection.
 
 `RunCoordinator` is the application use case for execution. Starting a run
 checks that the job exists and that the simulator is connected. It then creates
-a Core `JobRun`, applies the start transition, sends the controller command,
-and saves the run through `IRunRepository`.
+a Core `JobRun`, applies the start transition, sends the saved program's
+toolpath with the controller command, and saves the run through
+`IRunRepository`.
 
 Pause, resume, and cancel follow the same path. The Core object rejects invalid
 transitions before a command reaches the transport. For example, a ready run
 cannot be paused and a completed run cannot be cancelled.
 
-The desktop polls the authoritative snapshot during this release. Each
-`get_state` request moves a normal simulator run by a fixed ten percent. Version
-0.5 replaces that polling loop with SignalR notifications while retaining the
-snapshot endpoint for recovery.
+`RunMonitorService` samples the controller every 250 milliseconds. Each
+`get_state` request advances the normal simulator five percent through the
+execution plan's total segment length. `MachineUpdateBroadcaster` sends the
+resulting snapshots to the desktop through SignalR. The desktop separately
+reads the active `JobRun` without refreshing the controller, while the snapshot
+endpoint remains available for reconnection recovery.
 
 ## The protocol transcript
 

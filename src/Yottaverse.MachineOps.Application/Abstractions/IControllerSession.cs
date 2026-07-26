@@ -1,3 +1,4 @@
+using Yottaverse.MachineOps.Core.GCode;
 using Yottaverse.MachineOps.Core.Machines;
 
 namespace Yottaverse.MachineOps.Application.Abstractions;
@@ -14,7 +15,6 @@ public sealed record ControllerConnectionDefaults(
 
 public enum ControllerOperation
 {
-    Start,
     Pause,
     Resume,
     Cancel,
@@ -59,6 +59,10 @@ public interface IControllerSession
         CancellationToken cancellationToken);
 
     public Task<MachineSnapshot> RefreshAsync(CancellationToken cancellationToken);
+
+    public Task<MachineSnapshot> StartAsync(
+        IReadOnlyList<ToolpathSegment> toolpath,
+        CancellationToken cancellationToken);
 
     public Task<MachineSnapshot> ExecuteAsync(
         ControllerOperation operation,

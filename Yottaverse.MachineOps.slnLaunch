@@ -1,0 +1,19 @@
+[
+  {
+    "Name": "Local development",
+    "Projects": [
+      {
+        "Path": "src\\Yottaverse.MachineOps.Simulator\\Yottaverse.MachineOps.Simulator.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "src\\Yottaverse.MachineOps.Api\\Yottaverse.MachineOps.Api.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "src\\Yottaverse.MachineOps.Desktop\\Yottaverse.MachineOps.Desktop.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]

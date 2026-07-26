@@ -1,5 +1,6 @@
 using System.Net;
 using Yottaverse.MachineOps.Application.Abstractions;
+using Yottaverse.MachineOps.Core.GCode;
 using Yottaverse.MachineOps.Core.Machines;
 using Yottaverse.MachineOps.Infrastructure.Controller;
 using Yottaverse.MachineOps.Simulator;
@@ -71,8 +72,8 @@ public sealed class TcpControllerSessionTests
             ConnectionOptions(Guid.NewGuid(), server.BoundPort),
             CancellationToken.None);
 
-        MachineSnapshot started = await session.ExecuteAsync(
-            ControllerOperation.Start,
+        MachineSnapshot started = await session.StartAsync(
+            TestToolpath(),
             CancellationToken.None);
         MachineSnapshot firstSample = await session.RefreshAsync(CancellationToken.None);
         MachineSnapshot paused = await session.ExecuteAsync(
@@ -87,7 +88,9 @@ public sealed class TcpControllerSessionTests
             CancellationToken.None);
 
         Assert.Equal(OperatingStatus.Running, started.OperatingStatus);
-        Assert.Equal(10, firstSample.Progress);
+        Assert.Equal(5, firstSample.Progress);
+        Assert.Equal(1, firstSample.Position.X, 3);
+        Assert.Equal(0, firstSample.Position.Y, 3);
         Assert.Equal(OperatingStatus.Paused, paused.OperatingStatus);
         Assert.Equal(firstSample.Progress, heldSample.Progress);
         Assert.Equal(OperatingStatus.Running, resumed.OperatingStatus);
@@ -138,7 +141,7 @@ public sealed class TcpControllerSessionTests
             await session.ConnectAsync(
                 ConnectionOptions(Guid.NewGuid(), server.BoundPort),
                 CancellationToken.None);
-            await session.ExecuteAsync(ControllerOperation.Start, CancellationToken.None);
+            await session.StartAsync(TestToolpath(), CancellationToken.None);
 
             MachineSnapshot first = await session.RefreshAsync(CancellationToken.None);
             MachineSnapshot second = await session.RefreshAsync(CancellationToken.None);
@@ -156,6 +159,22 @@ public sealed class TcpControllerSessionTests
 
     private static ControllerConnectionOptions ConnectionOptions(Guid machineId, int port) =>
         new(machineId, "127.0.0.1", port, TimeSpan.FromSeconds(2));
+
+    private static ToolpathSegment[] TestToolpath() =>
+        [
+            new(
+                new Position3D(0, 0, 0),
+                new Position3D(10, 0, 0),
+                MotionMode.Rapid,
+                1,
+                null),
+            new(
+                new Position3D(10, 0, 0),
+                new Position3D(10, 10, 0),
+                MotionMode.Linear,
+                2,
+                300),
+        ];
 
     private static TcpControllerSession CreateSession() =>
         new(TimeProvider.System, new RecordingAuditStore());

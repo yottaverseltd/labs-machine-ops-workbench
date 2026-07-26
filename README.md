@@ -61,6 +61,20 @@ The backend readiness endpoint is
 `http://localhost:5080/health/ready`; generated OpenAPI is available at
 `http://localhost:5080/openapi/v1.json`.
 
+### Debug from Visual Studio
+
+For a source-level debugging session, run only PostgreSQL in Docker:
+
+```shell
+docker compose down
+docker compose up -d postgres
+```
+
+Open `Yottaverse.MachineOps.slnx` in Visual Studio 2026, select the
+`Local development` solution launch profile, and press F5. The profile starts
+the simulator, API, and Avalonia desktop together. Both the API launch profile
+and desktop client use `http://localhost:5080`.
+
 ## Architecture
 
 ```mermaid

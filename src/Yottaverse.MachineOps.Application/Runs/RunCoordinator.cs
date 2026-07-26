@@ -54,7 +54,7 @@ public sealed class RunCoordinator : IDisposable
                 job.Id,
                 MachineIdentifiers.LocalSimulator);
             run.Start(timeProvider.GetUtcNow());
-            await controllerSession.ExecuteAsync(ControllerOperation.Start, cancellationToken);
+            await controllerSession.StartAsync(job.Program.Segments, cancellationToken);
             await runRepository.SaveAsync(run, cancellationToken);
             activeRun = run;
             return run;

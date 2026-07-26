@@ -35,7 +35,7 @@ public sealed class MainViewModelTests
         Assert.Equal("simple-pocket.ngc", api.LastCreateJobRequest.Name);
         Assert.Equal("4B6467EA", viewModel.SavedJobReference);
         Assert.Equal("MachineOps API 1.0.0", viewModel.ApiStatus);
-        Assert.True(viewModel.StartRunCommand.CanExecute(null));
+        Assert.False(viewModel.StartRunCommand.CanExecute(null));
     }
 
     [Fact]
@@ -104,8 +104,75 @@ public sealed class MainViewModelTests
         Assert.Equal("1 jobs, 1 runs, 1 alarms, 1 protocol messages", viewModel.HistorySummary);
     }
 
+    [Fact]
+    public async Task ConnectDisplaysLivePositionFeedAndSpindle()
+    {
+        StubApiClient api = new()
+        {
+            ConnectedSnapshot = new MachineSnapshotDto(
+                Guid.NewGuid(),
+                "Connected",
+                "Running",
+                12.5,
+                7.25,
+                -2,
+                600,
+                12_000,
+                35,
+                4,
+                9,
+                null,
+                DateTimeOffset.UtcNow),
+        };
+        MainViewModel viewModel = CreateViewModel(api);
+
+        await viewModel.ConnectSimulatorCommand.ExecuteAsync(null);
+
+        Assert.Equal("Connected / Running", viewModel.MachineStatus);
+        Assert.Equal("X 12.500  Y 7.250  Z -2.000", viewModel.MachinePosition);
+        Assert.Contains("600", viewModel.MachineFeed, StringComparison.Ordinal);
+        Assert.Contains("12", viewModel.MachineSpindle, StringComparison.Ordinal);
+        Assert.Equal(new Position3D(12.5, 7.25, -2), viewModel.LiveToolPosition);
+        Assert.True(viewModel.HasLiveToolPosition);
+        Assert.Equal("LIVE", viewModel.ToolpathMode);
+        Assert.Equal(0, viewModel.RunProgress);
+        Assert.False(viewModel.ConnectSimulatorCommand.CanExecute(null));
+        Assert.True(viewModel.DisconnectSimulatorCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task SavedConnectedJobCanStart()
+    {
+        StubApiClient api = new()
+        {
+            ConnectedSnapshot = ConnectedIdleSnapshot(),
+        };
+        MainViewModel viewModel = CreateViewModel(api);
+
+        await viewModel.SaveJobCommand.ExecuteAsync(null);
+        await viewModel.ConnectSimulatorCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.StartRunCommand.CanExecute(null));
+    }
+
     private static MainViewModel CreateViewModel(StubApiClient api) =>
         new(new NullFilePicker(), new GCodeParser(), api, new StubLiveClient());
+
+    private static MachineSnapshotDto ConnectedIdleSnapshot() =>
+        new(
+            Guid.NewGuid(),
+            "Connected",
+            "Idle",
+            0,
+            0,
+            0,
+            null,
+            null,
+            0,
+            0,
+            1,
+            null,
+            DateTimeOffset.UtcNow);
 
     private sealed class NullFilePicker : IGCodeFilePicker
     {
@@ -150,6 +217,8 @@ public sealed class MainViewModelTests
             new PageDto<AlarmHistoryDto>([], 0, 50, 0),
             new PageDto<ProtocolMessageDto>([], 0, 50, 0));
 
+        public MachineSnapshotDto? ConnectedSnapshot { get; init; }
+
         public Task<ApiStatusDto> GetStatusAsync(CancellationToken cancellationToken) =>
             Task.FromResult(new ApiStatusDto("MachineOps API", "1.0.0", DateTimeOffset.UtcNow));
 
@@ -183,7 +252,9 @@ public sealed class MainViewModelTests
         public Task<MachineSnapshotDto> ConnectSimulatorAsync(
             int port,
             CancellationToken cancellationToken) =>
-            throw new NotSupportedException();
+            Task.FromResult(
+                ConnectedSnapshot ??
+                throw new NotSupportedException());
 
         public Task<MachineSnapshotDto> GetMachineSnapshotAsync(
             bool refresh,
