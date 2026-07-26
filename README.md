@@ -2,9 +2,9 @@
 
 MachineOps Workbench is a cross-platform job execution and diagnostics console
 for simulated GRBL-class controllers. It explores how the workflow class
-represented by traditional Java desktop G-code senders can be structured using
-modern .NET boundaries, persistent history, remote APIs, and reproducible
-testing.
+represented by traditional Java/Swing desktop G-code senders can be
+restructured using C#, Avalonia, modern .NET boundaries, persistent history,
+remote APIs, and reproducible testing.
 
 It solves a practical development problem: inspecting a program, exercising a
 controller workflow, observing live behaviour, and retaining enough evidence
@@ -33,7 +33,8 @@ tools. MachineOps supplies that loop as one deterministic local product.
 - Acknowledge alarms with idempotency and optimistic concurrency.
 - Search paged job, run, alarm, and protocol history.
 - Replay recorded simulator states and export ZIP diagnostic evidence.
-- Install self-contained desktop packages on Windows x64 and Debian/Ubuntu x64.
+- Build, install, smoke-test, and remove self-contained packages on Windows x64
+  and Debian/Ubuntu x64, with portable archives for both platforms.
 
 ![Persisted jobs, runs, alarms, and protocol messages in the Activity view](docs/images/workbench-activity.jpg)
 
@@ -170,6 +171,30 @@ See [installation](docs/deployment/installation.md),
 [upgrade and rollback](docs/deployment/upgrade-and-rollback.md). Executables
 are unsigned development builds.
 
+## Java/Swing modernisation map
+
+MachineOps does not translate `.java` files line by line. It demonstrates a
+safer form of porting: preserve observable workflow behaviour, separate the
+responsibilities hidden inside a legacy desktop application, and implement
+them behind testable C# boundaries.
+
+| Common Java/Swing responsibility | MachineOps counterpart |
+| --- | --- |
+| `JFrame`, panels, and Swing event listeners | Avalonia views, compiled bindings, MVVM commands, and controlled UI-thread updates |
+| UI classes coordinating business work | Application use cases and Core state machines |
+| In-process models shared with the UI | Versioned DTOs over a controller-based ASP.NET Core API |
+| Listener callbacks used as current state | SignalR notifications followed by authoritative HTTP snapshot reconciliation |
+| Session-only diagnostics | PostgreSQL history and explicit Dapper queries |
+| Hardware-dependent manual testing | Deterministic TCP simulator, replay scenarios, and automated tests |
+| Java's portable runtime distribution | Self-contained Windows and Linux packages, install/remove smoke tests, checksums, and an SBOM |
+
+This is a clean-room modern counterpart, not a claim that Universal G-Code
+Sender source was converted or copied. The detailed
+[Java/Swing to C#/Avalonia migration guide](docs/modernisation/java-swing-to-avalonia.md)
+shows how the repository can be used to discuss behavioural parity,
+incremental replacement, architecture decisions, and Windows/Linux acceptance
+gates.
+
 ## Release history
 
 | Version | Coherent product capability |
@@ -188,9 +213,11 @@ detailed in [CHANGELOG.md](CHANGELOG.md).
 
 ## Modernisation study
 
-Universal G-Code Sender is credited as prior art for the general desktop
-workflow of loading, inspecting, sending, and monitoring G-code. MachineOps is
-an independent clean-room modernisation study, not a port. No source code,
+[Universal G-Code Sender](https://github.com/winder/Universal-G-Code-Sender),
+a Java-based desktop application whose user interface uses Swing and the
+NetBeans Platform, is credited as prior art for the general workflow of
+loading, inspecting, sending, and monitoring G-code. MachineOps is an
+independent clean-room modernisation study, not a source port. No source code,
 tests, assets, screenshots, documentation, or distinctive interface from
 Universal G-Code Sender were copied.
 

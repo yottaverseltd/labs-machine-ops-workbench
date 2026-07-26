@@ -11,6 +11,8 @@ All notable changes are recorded here. Versions follow semantic versioning.
 - Added live feed and spindle values and state-aware desktop commands.
 - Added a Visual Studio multi-project launch profile and aligned local ports.
 - Removed avoidable local container startup warnings.
+- Documented the clean-room Java/Swing-to-C#/Avalonia modernisation map and the
+  Windows/Linux parity gates exercised by release automation.
 
 ## 1.0.0 - 2026-07-25
 
