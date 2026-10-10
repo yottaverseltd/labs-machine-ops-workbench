@@ -143,7 +143,7 @@ jobs:
         with:
           path: artifacts
           merge-multiple: true
-      - uses: anchore/sbom-action@v0.24.0
+      - uses: anchore/sbom-action@v0.24.3
         with:
           path: artifacts
           format: spdx-json
